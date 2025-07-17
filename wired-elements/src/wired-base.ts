@@ -45,7 +45,9 @@ export abstract class WiredBase extends LitElement {
   static resizeobserver = new ResizeObserver((entries, _observer) => {
     for (let entry of entries) {
       if (entry.target instanceof WiredBase) {
-        entry.target.updated();
+        const changed = new Map();
+        changed.set('size', entry.target.lastSize);
+        entry.target.updated(changed);
       }
     }
   });

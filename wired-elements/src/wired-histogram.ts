@@ -1,50 +1,66 @@
-import { customElement, PropertyValues } from 'lit-element';
+import { customElement } from 'lit-element';
 import { WiredBaseGraph } from './wired-base-graph';
+import { ScaleLinear, scaleLinear } from 'd3-scale';
 
 @customElement('wired-histogram')
 export class WiredHistogram extends WiredBaseGraph {
 
-  updated(_changedProperties?: PropertyValues) {
-    const rect = this.getBoundingClientRect();
-    const lastSize = [...this.lastSize];
-
-    super.updated(_changedProperties);
-    if (!( rect.height === lastSize[1] )) {
-      this.updateScale();
-    }
-    if (!( rect.width === lastSize[0] && rect.height === lastSize[1] )) {
-      this.poseData();
-    }
-  }
-
-  protected getBase(): number {
-    return this.lastSize[1];
+  protected getBaseScale(): ScaleLinear<number, number, never> {
+    return scaleLinear().range([0, this.getBoundingClientRect().height]);
   }
 
   protected poseData() {
-    // assign space for each node
+    // define w and h of a whole histogram
     const rect = this.getBoundingClientRect();
     const w = rect.width;
     const h = rect.height;
-    let wg = Math.floor(w / this.groups.length);
-    const marging = this.legend.length === 1 ? 0 : Math.ceil(.1 * wg);
-    let wsg = Math.max(Math.floor(( wg - 2 * marging ) / this.legend.length), 1);
-    let margin0 = 0;
-    if (this.groups[0]?.nodes[0]?.tagName == 'WIRED-BAR' && wsg > .1 * h) {
-      // make a bar not wider than .1 of its possible maximum height
-      wsg = Math.floor(.1 * h);
-      wg = this.legend.length * wsg + 2 * marging;
-      margin0 = Math.ceil((w - this.groups.length * wg) / 2);
+
+    // if no data available, just return
+    const groupCount = this.data?.length;
+    if (!groupCount) {
+      return;
     }
-    this.groups.forEach((g, i) => {
-      this.legend.forEach(({}, j) => {
-        g.nodes[j].style.position = 'absolute';
-        g.nodes[j].style.bottom = `0px`;
-        g.nodes[j].style.height = `${h}px`;
-        g.nodes[j].style.left = `${margin0 + i * wg + marging + j * wsg}px`;
-        g.nodes[j].style.width = `${wsg}px`;
-      });
-    });
+
+    // define w of a group of bars belonging to one data-id
+    let groupW = Math.floor(w / groupCount);
+    const groupMargin = this.legend.length === 1 ? 0 : Math.ceil(.1 * groupW);
+
+    // define w of a single bar
+    let barW = Math.max(Math.floor(( groupW - 2 * groupMargin ) / this.legend.length), 1);
+    let barMargin = 0;
+    if (barW > .1 * h) {
+      // make a bar not wider than .1 of its possible maximum height
+      barW = Math.floor(.1 * h);
+      groupW = this.legend.length * barW + 2 * groupMargin;
+      barMargin = Math.ceil(( w - groupCount * groupW ) / 2);
+    }
+
+    const thisGraph = this;
+    this.selectData(this.datapoints)?.join('wired-bar')
+        .text(this.getDataPointText)
+        .attr('selected', this.getDataPointSelected)
+        .attr('direction', '↑')
+        .attr('value', function (d) {
+          const barH = d.scale(d['data-value']);
+          return barH;
+        })
+        .style('--color', function (d) {
+            return thisGraph.legend
+                .find((l) => l.name === d['data-name'])?.style?.color
+                ?? 'black';
+        })
+        .style('position', 'absolute')
+        .style('bottom', '0px')
+        .style('height', h)
+        .style('left', function (d) {
+          // i is the index of data-id in data entries
+          const i = thisGraph.data!.findIndex((e) => e.id === d['data-id']);
+          // j is the index of data-name in legend
+          const j = thisGraph.legend!.findIndex((e) => e.name === d['data-name']);
+
+          return `${groupMargin + i * groupW + barMargin + j * barW}px`;
+        })
+        .style('width', `${barW}px`);
   }
 }
 

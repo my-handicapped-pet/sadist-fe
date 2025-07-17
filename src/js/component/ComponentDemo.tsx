@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import '../../css/index.scss';
 import './common/CustomElement';
 import Uniselector from './common/Uniselector';
+import { WiredHistogram, WiredGlobe } from '/wired-elements/lib/wired-elements';
 import { renderPage } from '../helper/react-helper';
 
 const ComponentDemo = () => {
@@ -65,6 +66,67 @@ const ComponentDemo = () => {
     }(),
     'wired-histogram': function () {
 
+      const ref1 = React.useRef<WiredHistogram | null>(null);
+      const ref2 = React.useRef<WiredHistogram | null>(null);
+      const ref3 = React.useRef<WiredHistogram | null>(null);
+      React.useEffect(() => {
+        if (ref1.current) {
+          ref1.current.data = [
+            {
+              id: 'Apple',
+              values: { count: 300 },
+              selected: isSelected('Apple'),
+            },
+            {
+              id: 'Banana',
+              values: { count: 1000 },
+              selected: isSelected('Banana'),
+            },
+            {
+              id: 'Cherry',
+              values: { count: 200 },
+              selected: isSelected('Cherry'),
+            }
+          ];
+        }
+      });
+      React.useEffect(() => {
+        if (ref2.current) {
+          ref2.current.data = [
+            {
+              id: 'Apple',
+              values: { 'on counter': 300, 'sold out': 120, 'stolen': 290 },
+            },
+            {
+              id: 'Banana',
+              values: { 'on counter': 500, 'sold out': 290, 'stolen': 200 },
+            },
+            {
+              id: 'Cherry',
+              values: { 'on counter': 100, 'sold out': 100, 'stolen': 0 },
+            }
+          ];
+        }
+      });
+      React.useEffect(() => {
+        if (ref3.current) {
+          ref3.current.data = [
+            {
+              id: 'Mexico City',
+              values: { elevation: 2537 },
+            },
+            {
+              id: 'Gulf of Mexico',
+              values: { elevation: -1585 },
+            },
+            {
+              id: 'Indian Ocean',
+              values: { elevation: -9911 },
+            }
+          ];
+        }
+      });
+
       const [selected, setSelected] = React.useState<string | null>(null);
       const isSelected = (str: string): boolean => selected === str;
 
@@ -72,133 +134,59 @@ const ComponentDemo = () => {
         <div style={{ width: '300px', display: 'inline-block' }}>
           <p>Single-parameter histogram</p>
           <br/>
-          <wired-histogram>
-            <wired-bar
-                data-id="Apple"
-                data-name="count"
-                data-value={300}
-                selected={isSelected('A')}
-                onClick={() => setSelected('A')}
-            />
-            <wired-bar
-                data-id="Banana"
-                data-name="count"
-                data-value={1000}
-                selected={isSelected('B')}
-                onClick={() => setSelected('B')}
-            />
-            <wired-bar
-                data-id="Cherry"
-                data-name="count"
-                data-value={200}
-                selected={isSelected('C')}
-                onClick={() => setSelected('C')}
-            />
+          <wired-histogram ref={ref1} onselected={(e) => setSelected(e.detail.id)}>
           </wired-histogram>
         </div>
         <div style={{ width: '300px', display: 'inline-block' }}>
           <p>Multi-parameter histogram</p>
           <br/>
-          <wired-histogram>
-            <wired-bar
-                data-id="Apple"
-                data-name="on counter"
-                data-value={300}
-            />
-            <wired-bar
-                data-id="Apple"
-                data-name="sold out"
-                data-value={120}
-            />
-            <wired-bar
-                data-id="Apple"
-                data-name="stolen"
-                data-value={290}
-            />
-            <wired-bar
-                data-id="Banana"
-                data-name="on counter"
-                data-value={499}
-            />
-            <wired-bar
-                data-id="Banana"
-                data-name="sold out"
-                data-value={300}
-            />
-            <wired-bar
-                data-id="Banana"
-                data-name="stolen"
-                data-value={202}
-            />
-            <wired-bar
-                data-id="Cherry"
-                data-name="on counter"
-                data-value={100}
-            />
-            <wired-bar
-                data-id="Cherry"
-                data-name="sold out"
-                data-value={100}
-            />
-            <wired-bar
-                data-id="Cherry"
-                data-name="stolen"
-                data-value={0}
-            />
+          <wired-histogram ref={ref2}>
           </wired-histogram>
         </div>
         <div style={{ width: '300px', display: 'inline-block' }}>
           <p>Histogram with negative values</p>
           <br/>
-          <wired-histogram>
-            <wired-bar
-                data-id="Mexico city"
-                data-name="elevation"
-                data-value={2537}
-            />
-            <wired-bar
-                data-id="Gulf of Mexico"
-                data-name="elevation"
-                data-value={-1585}
-            />
-            <wired-bar
-                data-id="Indian Ocean"
-                data-name="elevation"
-                data-value={-10911}
-            />
+          <wired-histogram ref={ref3}>
           </wired-histogram>
         </div>
       </>
     }(),
     'wired-globe': function () {
+      const ref = React.useRef<WiredGlobe | null>(null);
+
+      React.useEffect(() => {
+        if (ref.current) {
+          ref.current.data = [
+            {
+              id: { id: 1, name: 'Moscow', loc: { type: 'Point', coordinates: [ 37.61556, 55.75222 ] }},
+              values: { count: 2 },
+              label: 'Moscow',
+            },
+            {
+              id: { id: 2, name: 'Paris', loc: { type: 'Point', coordinates: [ 2.3488, 48.85341 ] }},
+              values: { count: 1 },
+              label: 'Parix',
+            },
+            {
+              id: { id: 3, name: 'New York', loc: { type: 'Point', coordinates: [ -74.00597, 40.71427 ] }},
+              values: { count: 1 },
+              label: 'New York',
+            }
+          ];
+        }
+      });
+
       return <>
         <wired-globe
+            ref={ref}
             style={{ width: '600px' }}
         >
-          <wired-marker
-            data-id={{ id: 1, name: 'Moscow', loc: { type: 'Point', coordinates: [ 37.61556, 55.75222 ] }}}
-            data-name="count"
-            data-value={2}
-            data-label='Moscow'
-          />
-          <wired-marker
-            data-id={{ id: 2, name: 'Paris', loc: { type: 'Point', coordinates: [ 2.3488, 48.85341 ] }}}
-            data-name="count"
-            data-value={1}
-            data-label='Paris'
-          />
-          <wired-marker
-            data-id={{ id: 3, name: 'New York', loc: { type: 'Point', coordinates: [ -74.00597, 40.71427 ] }}}
-            data-name="count"
-            data-value={1}
-            data-label='New York'
-          />
         </wired-globe>
       </>
     }(),
   }
 
-  const [demoKey, setDemoKey] = useState<keyof JSX.IntrinsicElements | undefined>('wired-dual-slider');
+  const [demoKey, setDemoKey] = useState<keyof JSX.IntrinsicElements | undefined>();
 
   return <>
     {Object.keys(demo).map(

@@ -8,7 +8,7 @@ import {
   FilterQuery,
   FilterQueryItem,
   MultiselectFilter, RangeFilter,
-  SearchFilter,
+  SearchFilter, VizGraphMeta,
   VizMeta,
   VizPipeline
 } from '../model/ds';
@@ -158,12 +158,11 @@ export const defaultDsInfo: DsInfo = __as<DsInfo>({
     return dsInfo;
   },
 
-  appendViz(vizMeta: VizMeta): VizMeta | undefined {
+  appendViz(vizMeta: VizMeta): VizGraphMeta | undefined {
     // default accumulater if no other one selected
     const tail: { [key: string]: VizMeta } = {
       count: {
         key: 'count',
-        type: vizMeta.type === 'histogram' ? 'bar' : 'marker',
         props: {
           action: 'accumulate',
           accumulater: 'count',
@@ -182,7 +181,7 @@ export const defaultDsInfo: DsInfo = __as<DsInfo>({
         // a graph which point itself is a graph/chart so far
       case 'group':
         return {
-          ...vizMeta,
+          ...( vizMeta as VizGraphMeta ),
           children: hasChildren ? this.vizMeta!.children : tail
         }
         // if user selects accumulated value, add it to the group,
@@ -230,7 +229,7 @@ export const defaultDsInfo: DsInfo = __as<DsInfo>({
     return ff?.length ? ff as FilterQueryItem[] : undefined;
   },
 
-  setViz(vizMeta: VizMeta) {
+  setViz(vizMeta: VizGraphMeta) {
     // Just set vizMeta; proposed viz's won't affect by it.
     this.vizMeta = vizMeta;
   },
@@ -389,7 +388,7 @@ export enum DsInfoActionType {
 export type DsInfoAction = {
   type: DsInfoActionType.SELECT_DS | DsInfoActionType.UPDATE_META_SUCCESS;
   meta: DsMeta;
-  vizMeta?: VizMeta;
+  vizMeta?: VizGraphMeta;
   filters?: Filter[];
   anchor?: CellType;
 } | {
@@ -408,5 +407,5 @@ export type DsInfoAction = {
   filters: Filter[];
 } | {
   type: DsInfoActionType.SET_VIZ;
-  vizMeta: VizMeta;
+  vizMeta: VizGraphMeta;
 }

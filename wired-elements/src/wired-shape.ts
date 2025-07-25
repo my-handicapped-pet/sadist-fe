@@ -14,6 +14,7 @@ export abstract class WiredShape extends WiredBase {
 
       :host(.wired-shape-hovered) {
         cursor: pointer;
+        z-index: 10; // it must be over the legend
       }
 
       :host(.wired-shape-hovered) svg, :host(.wired-shape-selected) svg {

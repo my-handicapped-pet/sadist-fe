@@ -9,7 +9,8 @@ import {
 } from 'lit-element';
 import { ScaleContinuousNumeric } from 'd3-scale';
 import { BaseType, select, Selection } from 'd3-selection';
-import { fire, formatNumber, ncolor } from './wired-lib';
+import { Axis } from 'd3-axis';
+import { fire, formatNumber, ncolor, svgNode } from './wired-lib';
 import { WiredBase } from './wired-base';
 import { WiredShape } from './wired-shape';
 import { WiredLegend } from './wired-legend';
@@ -17,7 +18,7 @@ import { WiredLegend } from './wired-legend';
 type Scale = 'auto' | number | [number, number];
 
 /**
- * Entry of the data. Each entry has the same group id (i.e.
+ * Entry of the data. Each entry has a unique group id (i.e.
  * category or range), and can map to one or more data points
  */
 export interface DataEntry {
@@ -40,6 +41,16 @@ export interface DataPoint {
   ['data-label']?: string;
   selected?: boolean;
   scale: ScaleContinuousNumeric<number, number>;
+}
+
+/**
+ * Definition of an axis in the graph. Wraps native d3 axis and adds
+ * any needed additional information
+ */
+export interface AxisDefinition {
+  axis: Axis<any>;
+  alignment: 'left' | 'bottom' | 'right' | 'top';
+  offset?: number;
 }
 
 /**
@@ -102,6 +113,12 @@ export abstract class WiredBaseGraph extends WiredBase {
    */
   protected pointed?: [WiredShape, unknown | DataPoint];
 
+  /**
+   * Rect which contains the graph itself, without axes
+   * @protected
+   */
+  protected _effectiveRect?: DOMRect;
+
   static get styles(): CSSResult {
     return css`
       :host {
@@ -134,6 +151,15 @@ export abstract class WiredBaseGraph extends WiredBase {
         float: right;
         z-index: 2;
         opacity: .75;
+      }
+      
+      .axis {
+        font-size: 10px;
+        font-family: sans-serif;
+      }
+      
+      .axis.left {
+        text-anchor: end;
       }
     `;
   }
@@ -217,6 +243,22 @@ export abstract class WiredBaseGraph extends WiredBase {
   }
 
   /**
+   * Safely get effective rect, fallback to bounding client rect
+   * if effective rect isn't yet set
+   */
+  get effectiveRect(): DOMRect {
+    return this._effectiveRect || this.getBoundingClientRect();
+  }
+
+  /**
+   * Set effective rect
+   * @param rect
+   */
+  set effectiveRect(rect: DOMRect) {
+    this._effectiveRect = rect;
+  }
+
+  /**
    * Do all preparations needed before pose data.
    * This includes
    *  - initialize scales
@@ -226,12 +268,64 @@ export abstract class WiredBaseGraph extends WiredBase {
    * @protected
    */
   protected prePoseData() {
+    // First, define effective area as a whole component area,
+    // define scales and draw axes correspondingly
+    this.effectiveRect = this.getBoundingClientRect();
+    this.initLegend();
+    this.initScale();
+    this.removeAxes();
+    const newEffectiveRect = this.poseAxes();
+
+    if (
+        newEffectiveRect.x !== this.effectiveRect.x ||
+        newEffectiveRect.y !== this.effectiveRect.y ||
+        newEffectiveRect.width !== this.effectiveRect.width ||
+        newEffectiveRect.height !== this.effectiveRect.height
+    ) {
+      // Adjust effective area to dispose axes as well
+      this.effectiveRect = newEffectiveRect;
+
+      // Define scale and draw axes in accordance with the new effective area
+      this.initScale();
+      this.removeAxes();
+      this.poseAxes();
+    }
+  }
+
+  /**
+   * Initialize {@link legend}
+   * @protected
+   */
+  protected initLegend() {
+    this.legend = [];
+    if (this.data && this.data.length) {
+      Object.keys(this.data[0].values).forEach((name: string) => {
+        // fill the legend. it's used both to display it to a user,
+        // and to more easily navigate through data points.
+        // currently assign next default color to each data series,
+        // in the future we'll probably allow user to customize the style
+        this.legend.push({
+          name,
+          style: { color: ncolor(this.legend.length) }
+        });
+      });
+    }
+
+    if (this.legendElement) {
+      this.legendElement.legend = this.legend;
+    }
+  }
+
+  /**
+   * Initialize {@link scaleByName}
+   * @protected
+   */
+  protected initScale() {
     // prepare scaleByBasket to initialize scaleByName
     const scaleByBasket = this.getScaleByBasket();
 
-    // initialize legend and scaleByName (we imply that all data entries have
+    // initialize scaleByName (we imply that all data entries have
     // the same values keys)
-    this.legend = [];
     this.scaleByName = {};
     if (this.data && this.data.length) {
       Object.keys(this.data[0].values).forEach((name: string) => {
@@ -262,22 +356,9 @@ export abstract class WiredBaseGraph extends WiredBase {
           throw new Error('Internal error calculating scale for ' + name);
         }
 
-        // fill the legend. it's used both to display it to a user,
-        // and to more easily navigate through data points.
-        // currently assign next default color to each data series,
-        // in the future we'll probably allow user to customize the style
-        this.legend.push({
-          name,
-          style: { color: ncolor(this.legend.length) }
-        });
-
         // fill the scaleByName
         this.scaleByName[name] = scaleByBasket[basket];
       });
-
-      if (this.legendElement) {
-        this.legendElement.legend = this.legend;
-      }
     }
   }
 
@@ -326,6 +407,14 @@ export abstract class WiredBaseGraph extends WiredBase {
    * @protected
    */
   protected abstract getBaseScale(): ScaleContinuousNumeric<number, number>;
+
+  /**
+   * Get all axes of the graph
+   * @protected
+   */
+  protected getAxes(): AxisDefinition[] {
+    return [];
+  }
 
   /**
    * Get actual scales for each basket.
@@ -401,6 +490,120 @@ export abstract class WiredBaseGraph extends WiredBase {
         .data(data);
   }
 
+  /**
+   * Get basket (scale index) given data series name
+   *
+   * @param name data series name
+   * @return basket name for the data series name, or null
+   * if the scale is already set as a number or a range
+   * @private
+   */
+  protected getBasketByName(name: string): string | null {
+    if (this.scale === 'auto') {
+      return 'auto';
+    } else if (typeof this.scale === 'number' || this.scale instanceof Array) {
+      return null;
+    } else {
+      const scale = this.scale[name];
+      if (scale === undefined || typeof scale === 'string') {
+        return scale || 'auto' === 'auto' ? `$${name}` : scale;
+      } else {
+        return null;
+      }
+    }
+  }
+
+  /**
+   * Add axes to the graph. Each axis is added to one of the sides,
+   * and effective size (size of the graph area itself) decreases
+   * correspondingly
+   * @return {DOMRect} Remained decreased effective rect of the graph
+   * @protected
+   */
+  protected poseAxes(): DOMRect {
+    const totalRect = this.getBoundingClientRect();
+    const effectiveRect = this.effectiveRect;
+    // total transformations for each side
+    let tl = 0, tb = totalRect.height, tr = totalRect.width, tt = 0;
+    // define existing deltas between this rect and effective rect
+    let dl = effectiveRect.left - totalRect.left,
+        db = effectiveRect.bottom - totalRect.top,
+        dr = effectiveRect.right - totalRect.left,
+        dt = effectiveRect.top - totalRect.top;
+
+    const axes = this.getAxes();
+    for (let i = 0; i < axes.length; i++){
+      const def = axes[i];
+      // first, add a g to svg
+      const g = svgNode('g');
+      g.id = `axis-${i}`;
+      g.classList.add('axis', def.alignment);
+      this.svg?.append(g);
+
+      // attach the axis to the newly added g
+      // @ts-ignore
+      select(this.shadowRoot).select<SVGGElement>(`svg g#${g.id}`)
+          .call(def.axis);
+
+      // get the size of the resulting element
+      const rect = g.getBoundingClientRect();
+
+      // if offset is set, don't put an axis to the side and decease graph size,
+      // but put an axis over the graph with the given offset
+      if (typeof def.offset == 'number') {
+        switch (def.alignment) {
+          case "left":
+            g.style.transform = `translate(${dl + def.offset}px, ${dt}px)`;
+            break;
+          case "bottom":
+            g.style.transform = `translate(${dl}px, ${db - def.offset}px)`;
+            break;
+          case "right":
+            g.style.transform = `translate(${dr - def.offset}px, ${dt}px)`;
+            break;
+          case "top":
+            g.style.transform = `translate(${dl}px, ${dt + def.offset}px)`;
+            break;
+        }
+      } else {
+
+        // transform the element and increase transformation values
+        switch (def.alignment) {
+          case "left":
+            tl += rect.width;
+            g.style.transform = `translate(${tl}px, ${dt}px)`;
+            break;
+          case "bottom":
+            tb -= rect.height;
+            g.style.transform = `translate(${dl}px, ${tb}px)`;
+            break;
+          case "right":
+            tr -= rect.width;
+            g.style.transform = `translate(${tr}px, ${dt}px)`;
+            break;
+          case "top":
+            tt += rect.height;
+            g.style.transform = `translate(${dl}px, ${tt}px)`;
+            break;
+        }
+      }
+    }
+
+    // return new effective rect
+    return new DOMRect(totalRect.x + tl, totalRect.y + tt, tr - tl, tb - tt);
+  }
+
+  /**
+   * Remove all axes from the graph
+   * @protected
+   */
+  protected removeAxes() {
+    let g;
+    while (g = this.svg?.querySelector('.axis')) {
+      this.svg?.removeChild(g);
+    }
+  }
+
   protected onMouseMove(element: BaseType, event: MouseEvent, dp: unknown) {
     if (this.pointed && !this.pointed[0].containsPoint(event.clientX, event.clientY)) {
       this.pointed[0].hover(false);
@@ -428,29 +631,6 @@ export abstract class WiredBaseGraph extends WiredBase {
         element: this.pointed[0],
         sourceEvent: event
       });
-    }
-  }
-
-  /**
-   * Get basket (scale index) given data series name
-   *
-   * @param name data series name
-   * @return basket name for the data series name, or null
-   * if the scale is already set as a number or a range
-   * @private
-   */
-  private getBasketByName(name: string): string | null {
-    if (this.scale === 'auto') {
-      return 'auto';
-    } else if (typeof this.scale === 'number' || this.scale instanceof Array) {
-      return null;
-    } else {
-      const scale = this.scale[name];
-      if (typeof scale === 'string') {
-        return scale || 'auto' === 'auto' ? `$${name}` : scale;
-      } else {
-        return null;
-      }
     }
   }
 }

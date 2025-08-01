@@ -1,5 +1,3 @@
-import { spawn } from 'node:child_process';
-import { ChildProcessWithoutNullStreams } from 'child_process';
 import { Frame } from '@playwright/test';
 import { expect, test } from './fixture/base-fixture';
 import { webCrawlerProviderTest } from './fixture/webcrawler-provider-fixture';
@@ -28,18 +26,6 @@ test.afterEach(async ({ page }) => {
   await Promise.all(onWebpackOverlayPromise);
   page.off('frameattached', onWebpackOverlay);
 });
-
-let websocketMockProcess: ChildProcessWithoutNullStreams;
-
-test.beforeAll(() => {
-  websocketMockProcess = spawn('node',
-      ['websocket-mock.js'],
-      { stdio: 'pipe' });
-});
-
-test.afterAll(() => {
-  websocketMockProcess.kill();
-})
 
 test('that entering values into the webcrawler\'s setup fields does not raspidoraśivat them', async ({ page }) => {
   await page.land();
@@ -145,7 +131,7 @@ webCrawlerProviderTest('construct script from the template', async ({ newDialog 
 });
 
 webCrawlerProviderTest('execute script via websocket', async ({ page, newDialog }) => {
-  // run websocket mock in before()....
+  // websocket mocked in the fixture
 
   await page.getByRole('img', { name: 'Edit script' }).click();
 
@@ -164,6 +150,4 @@ webCrawlerProviderTest('execute script via websocket', async ({ page, newDialog 
   expect(requestData, { message: 'Expected PUT request' }).toBeTruthy();
   // to properly parse form data isn't easy here, so test string inclusion
   expect(requestData).toContain('script\nABOBA');
-
-  // stop websocket in after()...
 });

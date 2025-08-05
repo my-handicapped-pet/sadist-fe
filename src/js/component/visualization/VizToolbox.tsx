@@ -22,7 +22,7 @@ const VizToolbox = (props: VizToolboxProps) => {
     <Toolbox>
       <Toolbox.Button
           src={Icon.fileJson}
-          alt="Vidsualization"
+          alt="Visualization"
           title="Edit visualization query"
           onClick={() => dispatchState({
             type: DsDialogActionType.OPEN,

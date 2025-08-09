@@ -158,7 +158,7 @@ export const defaultDsInfo: DsInfo = __as<DsInfo>({
     return dsInfo;
   },
 
-  appendViz(vizMeta: VizMeta): VizGraphMeta | undefined {
+  appendViz(addVizMetas: VizMeta[], removeVizMetas: VizMeta[]): VizGraphMeta | undefined {
     // default accumulater if no other one selected
     const tail: { [key: string]: VizMeta } = {
       count: {
@@ -170,41 +170,30 @@ export const defaultDsInfo: DsInfo = __as<DsInfo>({
       }
     };
 
-    // check if we should use that default one
-    const hasChildren = this.vizMeta?.children &&
-        !this.isVizSelected(tail['count'])
-
-    switch (vizMeta.props.action) {
-
-        // if user selects a group, replace the exising group, if any,
-        // (no group of group such as histogram of histogram or
-        // a graph which point itself is a graph/chart so far
-      case 'group':
-        return {
-          ...( vizMeta as VizGraphMeta ),
-          children: hasChildren ? this.vizMeta!.children : tail
-        }
-        // if user selects accumulated value, add it to the group,
-        // if any, or create a null-group
-      case 'accumulate':
-        return {
-          ...( this.vizMeta || {
-            key: 'root',
-            type: 'histogram',
-            props: {
-              action: 'group',
-            }
-          } ),
-          children: {
-            ...( hasChildren ? this.vizMeta!.children : {} ),
-            [vizMeta.key]: vizMeta
+    const vizMeta: VizGraphMeta = <VizGraphMeta>addVizMetas.find((m) => m.props.action === 'group')
+        || this.vizMeta
+        || {
+          key: 'root',
+          type: 'histogram',
+          props: {
+            action: 'group',
           }
         };
-
-      default:
-        console.error(`Failure of adding ${vizMeta.key}`);
-        return this.vizMeta;
+    vizMeta.children = this.vizMeta?.children || {};
+    delete vizMeta.children['count'];
+    for (const m of removeVizMetas) {
+      delete vizMeta.children[m.key];
     }
+    for (const m of addVizMetas) {
+      if (m.props.action === 'accumulate') {
+        vizMeta.children[m.key] = m;
+      }
+    }
+    if (!Object.keys(vizMeta.children).length) {
+      vizMeta.children = tail;
+    }
+
+    return vizMeta;
   },
 
   isVizSelected(vizMeta: VizMeta): boolean {
@@ -284,10 +273,10 @@ export function reduceDsInfo(dsInfo: DsInfo, action: DsInfoAction): DsInfo {
         anchor: action.anchor,
       });
 
-    case DsInfoActionType.ADD_VIZ:
+    case DsInfoActionType.APPEND_VIZ:
       return {
         ...dsInfo,
-        vizMeta: dsInfo.appendViz(action.vizMeta),
+        vizMeta: dsInfo.appendViz(action.addVizMetas || [], action.removeVizMetas || []),
       };
 
     case DsInfoActionType.APPLY_FILTER:
@@ -352,7 +341,7 @@ export enum DsInfoActionType {
   /**
    * Grouping by certain col was selected
    */
-  ADD_VIZ,
+  APPEND_VIZ,
 
   /**
    * Filter was updated
@@ -392,8 +381,9 @@ export type DsInfoAction = {
   filters?: Filter[];
   anchor?: CellType;
 } | {
-  type: DsInfoActionType.ADD_VIZ;
-  vizMeta: VizMeta;
+  type: DsInfoActionType.APPEND_VIZ;
+  addVizMetas?: VizMeta[];
+  removeVizMetas?: VizMeta[];
 } | {
   type: DsInfoActionType.APPLY_FILTER;
 } | {

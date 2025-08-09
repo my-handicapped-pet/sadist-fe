@@ -23,14 +23,14 @@ const ColDropdown = (
   const dropdownRef = useRef<DropdownElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    const scrollHandler = () => {
-      if (contentRef.current) {
-        contentRef.current.style.transform = `translateY(-${window.scrollY}px)`;
-      }
+  const fixDropdownContentPosition = () => {
+    if (contentRef.current) {
+      contentRef.current.style.transform = `translateY(-${window.scrollY}px)`;
     }
-    window.addEventListener('scroll', scrollHandler);
-    return () => window.removeEventListener('scroll', scrollHandler);
+  }
+  useEffect(() => {
+    window.addEventListener('scroll', fixDropdownContentPosition);
+    return () => window.removeEventListener('scroll', fixDropdownContentPosition);
   }, []);
 
   const renderVizProposal = () => {
@@ -42,25 +42,27 @@ const ColDropdown = (
       <span className="col-action-hint">Visualize...</span>
       <wired-listbox
           style={{ width: '100%' }}
+          multiselect={true}
           onselected={(event) => {
-            const key = event.detail.selected;
-            const vizMeta = vizMetaProposed?.find(v => v.key === key)!;
+            const addVizMetas = vizMetaProposed?.filter((m) => event.detail.selected.includes(m.key));
+            const removeVizMetas = vizMetaProposed?.filter((m) => event.detail.unselected.includes(m.key));
             dispatchDsInfo({
-              type: DsInfoActionType.ADD_VIZ,
-              vizMeta,
+              type: DsInfoActionType.APPEND_VIZ,
+              addVizMetas,
+              removeVizMetas,
             });
             dropdownRef.current?.collapse();
           }}
       >
-        {vizMetaProposed.map(vizMeta => (
-            <wired-item
-                key={vizMeta.key}
-                value={vizMeta.key}
-                selected={dsInfo.isVizSelected(vizMeta)}
-            >
-              {vizMeta.stringrepr}
-            </wired-item>
-        ))}
+        {
+          vizMetaProposed.map(vizMeta => ( <wired-item
+              key={vizMeta.key}
+              value={vizMeta.key}
+              selected={dsInfo.isVizSelected(vizMeta)}
+          >
+            {vizMeta.stringrepr}
+          </wired-item> ))
+        }
       </wired-listbox>
     </div>;
   }

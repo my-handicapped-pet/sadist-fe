@@ -8,6 +8,7 @@ interface DropdownProps {
 }
 
 interface DropdownElement {
+  open: boolean;
   expand(): void;
   collapse(): void;
 }
@@ -23,6 +24,7 @@ const __Dropdown: React.ForwardRefRenderFunction<DropdownElement, DropdownProps>
   const [open, setOpen] = useState(false);
 
   useImperativeHandle(ref, () => ( {
+    open,
     expand: () => setOpen(true),
     collapse: () => setOpen(false),
   } ));

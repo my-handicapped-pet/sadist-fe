@@ -588,12 +588,13 @@ export interface DsInfo {
   init(info: DsInfoInit): DsInfo;
 
   /**
-   * Add proposed graph to visualization.
+   * Add/remove proposed graph(s) to visualization.
    * Can append as a child, or replace, or do some custom logic,
    * depending on graph's nature.
-   * @param vizMeta
+   * @param addVizMetas
+   * @param removeVizMetas
    */
-  appendViz(vizMeta: VizMeta): VizGraphMeta | undefined;
+  appendViz(addVizMetas: VizMeta[], removeVizMetas: VizMeta[]): VizGraphMeta | undefined;
 
   /**
    * Check if a certain graph is included to the current

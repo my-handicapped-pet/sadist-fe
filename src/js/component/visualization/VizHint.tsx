@@ -93,8 +93,8 @@ const VizHint: React.FC<VizHintProps> = ({
                               key={vizMeta.key}
                               className="bare"
                               onClick={() => dispatchDsInfo({
-                                type: DsInfoActionType.ADD_VIZ,
-                                vizMeta
+                                type: DsInfoActionType.APPEND_VIZ,
+                                addVizMetas: [vizMeta],
                               })}>{vizMeta.stringrepr}
                           </a>
                           return i == 0 ? link : <>, {link}</>;

@@ -299,7 +299,7 @@ export abstract class WiredBaseGraph extends WiredBase {
   protected initLegend() {
     this.legend = [];
     if (this.data && this.data.length) {
-      Object.keys(this.data[0].values).forEach((name: string) => {
+      this.getNames().forEach((name: string) => {
         // fill the legend. it's used both to display it to a user,
         // and to more easily navigate through data points.
         // currently assign next default color to each data series,
@@ -324,11 +324,10 @@ export abstract class WiredBaseGraph extends WiredBase {
     // prepare scaleByBasket to initialize scaleByName
     const scaleByBasket = this.getScaleByBasket();
 
-    // initialize scaleByName (we imply that all data entries have
-    // the same values keys)
+    // initialize scaleByName
     this.scaleByName = {};
     if (this.data && this.data.length) {
-      Object.keys(this.data[0].values).forEach((name: string) => {
+      this.getNames().forEach((name: string) => {
         // get basket based on name and this.scale. TODO possibly simplify it
         let basket: string | null = this.getBasketByName(name);
         if (!basket) {
@@ -360,6 +359,23 @@ export abstract class WiredBaseGraph extends WiredBase {
         this.scaleByName[name] = scaleByBasket[basket];
       });
     }
+  }
+
+  /**
+   * Get all names for the data entries
+   * @protected
+   */
+  protected getNames() {
+    // return Object.keys(this.data[0].values);
+    return this.data?.map((d) => Object.keys(d.values))
+        .reduce((keys, keys1) => {
+          for (const key of keys1) {
+            if (!keys.includes(key)) {
+              keys.push(key);
+            }
+          }
+          return keys;
+        }) || [];
   }
 
   /**
@@ -442,9 +458,20 @@ export abstract class WiredBaseGraph extends WiredBase {
           return basketory;
         }, {})
     )).reduce(function (b0: Basketory, b1: Basketory): Basketory {
-      return Object.fromEntries(Object.entries(b0).map(([basket, { range }]) =>
-          [basket, { range: [Math.min(range[0], b1[basket].range[0]), Math.max(range[1], b1[basket].range[1])] }]
-      ));
+      // merge baskets b1 into b0 and return b0
+      for (const [basket, { range }] of Object.entries(b1)) {
+        if (basket in b0) {
+          b0[basket] = {
+            range: [
+              Math.min(b0[basket].range[0], range[0]),
+              Math.max(b0[basket].range[1], range[1]),
+            ]
+          }
+        } else {
+          b0[basket] = { range };
+        }
+      }
+      return b0;
     });
 
     // step #2: calculate scale (in terms of d3-scale this time) for each basket.

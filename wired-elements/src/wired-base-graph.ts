@@ -185,7 +185,7 @@ export abstract class WiredBaseGraph extends WiredBase {
     }
   }
 
-  updated(changed?: PropertyValues) {
+  protected updated(changed?: PropertyValues) {
     const size = this.lastSize;
 
     super.updated(changed);

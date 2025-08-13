@@ -1,5 +1,6 @@
-import React, { CSSProperties, Dispatch, useRef } from 'react';
+import React, { CSSProperties, Dispatch, useRef, useState } from 'react';
 import equal from 'deep-equal';
+import VizError from './VizError';
 import {
   ColSpecificProps,
   Filter,
@@ -30,19 +31,13 @@ interface VizGraphProps {
 
 const VizGraph = (props: VizGraphProps) => {
 
-  let {
+  const {
     style, meta, data, filters, dispatchDsInfo
   } = props;
 
   const graphRef = useRef<GraphRef | null>(null);
 
-  // @ts-ignore
-  function error(message: string) {
-    return <div className="error">
-      <p>Error: <strong>{message}</strong> occured while rendering graph:</p>
-      <pre>{JSON.stringify(meta)}</pre>
-    </div>
-  }
+  const [error, setError] = useState<string | undefined>();
 
   let filter: Filter | undefined,
       isSelected: (arg0: VizDataItem) => boolean | undefined,
@@ -131,8 +126,20 @@ const VizGraph = (props: VizGraphProps) => {
     }
   });
 
-  // @ts-ignore require union instead of intersection here, why???
-  return <><Graph ref={graphRef} style={style} onselected={onSelected}/></>;
+  return <>
+    {error && <VizError meta={meta} message={error}/>}
+    {/*// @ts-ignore require union instead of intersection here, why???*/}
+    <Graph ref={graphRef} style={style} onselected={onSelected}
+           onupdate={() => {
+             setError(undefined);
+           }}
+           onerror={(err) => {
+             // to be able to see stacktrace...
+             console.error(err.detail);
+             setError(err.detail.toString());
+           }}
+    />
+  </>;
 }
 
 export default VizGraph;

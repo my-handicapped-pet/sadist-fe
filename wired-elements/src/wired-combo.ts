@@ -234,7 +234,7 @@ export class WiredCombo extends WiredBase {
     });
   }
 
-  updated(changed?: PropertyValues) {
+  protected updated(changed?: PropertyValues) {
     if (changed?.has('disabled')) {
       this.refreshDisabledState();
     }

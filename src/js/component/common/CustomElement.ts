@@ -28,10 +28,8 @@ import {
   WiredTab
 } from '/wired-elements/lib/wired-elements';
 
-type CustomElement<T> = Partial<Omit<T, keyof HTMLElement> & Omit<HTMLProps<T>, keyof Omit<T, keyof HTMLElement>>>;
-type CustomElementWithEvent<T, K extends string> =
-    CustomElement<T>
-    & { [k in `on${K}`]?: (e: CustomEvent) => void };
+type CustomElement<T, K extends string = never> = Partial<Omit<T, keyof HTMLElement> & Omit<HTMLProps<T>, keyof Omit<T, keyof HTMLElement>>> &
+    { [k in `on${'update' | 'error' | K}`]?: (e: CustomEvent) => void };
 
 declare global {
   namespace JSX {
@@ -39,24 +37,24 @@ declare global {
       ['wired-divider']: CustomElement<WiredDivider>;
       ['wired-spinner']: CustomElement<WiredSpinner>;
       ['wired-item']: CustomElement<WiredItem>;
-      ['wired-listbox']: CustomElementWithEvent<WiredListbox, 'selected'>;
+      ['wired-listbox']: CustomElement<WiredListbox, 'selected'>;
       ['wired-dialog']: CustomElement<WiredDialog>;
       ['wired-card']: CustomElement<WiredCard>;
       ['wired-button']: CustomElement<WiredButton>;
-      ['wired-combo']: CustomElementWithEvent<WiredCombo, 'selected'>;
-      ['wired-radio']: CustomElementWithEvent<WiredRadio, 'change'>;
-      ['wired-input']: CustomElementWithEvent<WiredInput, 'change' | 'input'>;
-      ['wired-search-input']: CustomElementWithEvent<WiredSearchInput, 'change' | 'input' | 'close'>;
-      ['wired-slider']: CustomElementWithEvent<WiredSlider, 'change' | 'input'>;
-      ['wired-dual-slider']: CustomElementWithEvent<WiredDualSlider, 'change' | 'input'>;
-      ['wired-checkbox']: CustomElementWithEvent<WiredCheckbox, 'change'>;
-      ['wired-combo-lazy']: CustomElementWithEvent<WiredComboLazy, 'selected'>;
+      ['wired-combo']: CustomElement<WiredCombo, 'selected'>;
+      ['wired-radio']: CustomElement<WiredRadio, 'change'>;
+      ['wired-input']: CustomElement<WiredInput, 'change' | 'input'>;
+      ['wired-search-input']: CustomElement<WiredSearchInput, 'change' | 'input' | 'close'>;
+      ['wired-slider']: CustomElement<WiredSlider, 'change' | 'input'>;
+      ['wired-dual-slider']: CustomElement<WiredDualSlider, 'change' | 'input'>;
+      ['wired-checkbox']: CustomElement<WiredCheckbox, 'change'>;
+      ['wired-combo-lazy']: CustomElement<WiredComboLazy, 'selected'>;
       ['wired-tab']: CustomElement<WiredTab>;
       ['wired-tabs']: CustomElement<WiredTabs>;
       ['wired-bar']: CustomElement<WiredBar>;
       ['wired-marker']: CustomElement<WiredMarker>;
-      ['wired-histogram']: CustomElementWithEvent<WiredHistogram, 'selected'>;
-      ['wired-globe']: CustomElementWithEvent<WiredGlobe, 'selected'>;
+      ['wired-histogram']: CustomElement<WiredHistogram, 'selected'>;
+      ['wired-globe']: CustomElement<WiredGlobe, 'selected'>;
     }
   }
 }

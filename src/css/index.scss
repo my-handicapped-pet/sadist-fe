@@ -143,6 +143,7 @@ wired-dialog#error-dialog {
 .error {
   width: 100%;
   padding: 5px;
+  overflow-x: scroll;
   background-color: #888888;
   color: maroon;
 }

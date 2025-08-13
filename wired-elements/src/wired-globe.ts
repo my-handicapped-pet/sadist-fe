@@ -85,7 +85,7 @@ export class WiredGlobe extends WiredBaseGraph {
     this.addEventListener('wheel', this.onWheelOnGraph);
   }
 
-  updated(changedProperties?: PropertyValues) {
+  protected updated(changedProperties?: PropertyValues) {
     const lastSize = [...this.lastSize];
 
     super.updated(changedProperties);

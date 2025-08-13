@@ -495,11 +495,11 @@ export abstract class WiredBaseGraph extends WiredBase {
    *
    * @example
    * // To bind default datapoints
-   * this.selection(this.datapoints)
+   * this.selectData(this.datapoints)
    *
    * @example
    * // To preprocess-datapoints before binding
-   * this.selection(this.datapoints?.map((dp) => {
+   * this.selectData(this.datapoints?.map((dp) => {
    *   let x = {};
    *   // fill x with preprocessed dp here...
    *   return x;

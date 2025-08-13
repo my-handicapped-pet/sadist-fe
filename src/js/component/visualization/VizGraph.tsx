@@ -105,24 +105,29 @@ const VizGraph = (props: VizGraphProps) => {
   // bind data to the graph
   React.useEffect(() => {
     if (graphRef.current) {
-      graphRef.current.data = data.map((d) => {
-        // remember and remove id. all other entries go to values
-        const id = d.id;
-        const label = select(meta.labelselector, d) || d.id;
-        const selected = isSelected(d);
-        const values: { [p: string]: number } = Object
-            .fromEntries(
-                Object.entries(d)
-                    .filter(([k, v]) => k !== 'id' && typeof v === 'number')
-            ) as { [p: string]: number };
+      try {
+        graphRef.current.data = data.map((d) => {
+          // remember and remove id. all other entries go to values
+          const id = d.id;
+          const label = select(meta.labelselector, d) || d.id;
+          const selected = isSelected(d);
+          const values: { [p: string]: number } = Object
+              .fromEntries(
+                  Object.entries(d)
+                      .filter(([k, v]) => k !== 'id' && typeof v === 'number')
+              ) as { [p: string]: number };
 
-        return {
-          id,
-          values,
-          label,
-          selected,
-        };
-      });
+          return {
+            id,
+            values,
+            label,
+            selected,
+          };
+        });
+      } catch (e: any) {
+        console.error(e);
+        setError(e.toString());
+      }
     }
   });
 

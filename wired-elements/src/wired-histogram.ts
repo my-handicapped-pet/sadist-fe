@@ -42,9 +42,13 @@ export class WiredHistogram extends WiredBaseGraph {
     const { h, margin, group } = this.size;
     const axes: AxisDefinition[] = [];
 
+    if (!this.data) {
+      return [];
+    }
+
     // define categorical axis on the bottom
     const catScale = scaleBand()
-        .domain(this.data!.map((e) => e.label || `${e.id}`).map((label) => {
+        .domain(this.data.map((e) => e.label || `${e.id}`).map((label) => {
           // cut long text, in order not to use BBox or measureText,
           // just assume the rate 16px ~= 3 symbols
           const rate = 3 / 16;

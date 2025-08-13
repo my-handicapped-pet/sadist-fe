@@ -54,8 +54,8 @@ const __Dropdown: React.ForwardRefRenderFunction<DropdownElement, DropdownProps>
     }
   }, [root.current, pane.current, open])
 
-  const onOpen = (event: React.MouseEvent<HTMLAnchorElement>) => {
-    event.stopPropagation();
+  const onOpen = (_event: React.MouseEvent<HTMLAnchorElement>) => {
+    // event.stopPropagation();
     setOpen(x => !x);
   };
 

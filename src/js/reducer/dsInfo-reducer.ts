@@ -171,14 +171,13 @@ export const defaultDsInfo: DsInfo = __as<DsInfo>({
     };
 
     const vizMeta: VizGraphMeta = <VizGraphMeta>addVizMetas.find((m) => m.props.action === 'group')
-        || this.vizMeta
-        || {
+        || ( this.vizMeta?.props.action === 'group' ? { ...this.vizMeta } : {
           key: 'root',
           type: 'histogram',
           props: {
             action: 'group',
           }
-        };
+        } );
     vizMeta.children = this.vizMeta?.children || {};
     delete vizMeta.children['count'];
     for (const m of removeVizMetas) {

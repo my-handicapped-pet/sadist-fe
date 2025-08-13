@@ -51,7 +51,7 @@ const ColDropdown = (
               addVizMetas,
               removeVizMetas,
             });
-            dropdownRef.current?.collapse();
+            // dropdownRef.current?.collapse();
           }}
       >
         {

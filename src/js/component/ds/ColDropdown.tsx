@@ -1,4 +1,4 @@
-import React, { Dispatch, useEffect, useRef } from 'react';
+import React, { Dispatch, useRef } from 'react';
 import Icon from '../../icon/Icon';
 import Dropdown, { DropdownElement } from '../common/Dropdown';
 import { DsInfoAction, DsInfoActionType } from '../../reducer/dsInfo-reducer';
@@ -23,15 +23,37 @@ const ColDropdown = (
   const dropdownRef = useRef<DropdownElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
 
-  const fixDropdownContentPosition = () => {
-    if (contentRef.current) {
-      contentRef.current.style.transform = `translateY(-${window.scrollY}px)`;
+  const fixDropdownContentPosition = (open: boolean) => {
+    // the horizontal scroll pinpoint. TODO consider more reliable selector
+    const tableOuterDiv = document.querySelector('#ds>div>div:nth-child(2)');
+
+    function doFix() {
+      const scrollX = tableOuterDiv?.scrollLeft ?? 0;
+      const scrollY = window.scrollY;
+      if (contentRef.current) {
+        contentRef.current.style.transform = `translate(${-scrollX}px,${-scrollY}px)`;
+      }
+    }
+
+    // remove old listeners, if any
+    if (fixDropdownContentPositionRef.current) {
+      window.removeEventListener('scroll', fixDropdownContentPositionRef.current);
+      ( tableOuterDiv as HTMLDivElement )?.removeEventListener('scroll', fixDropdownContentPositionRef.current);
+      fixDropdownContentPositionRef.current = undefined;
+    }
+
+    if (open) {
+      // fix immediately on dropdown open
+      doFix();
+
+      // fix on scroll
+      fixDropdownContentPositionRef.current = doFix;
+      window.addEventListener('scroll', doFix);
+      ( tableOuterDiv as HTMLDivElement )?.addEventListener('scroll', doFix);
     }
   }
-  useEffect(() => {
-    window.addEventListener('scroll', fixDropdownContentPosition);
-    return () => window.removeEventListener('scroll', fixDropdownContentPosition);
-  }, []);
+
+  const fixDropdownContentPositionRef = useRef<() => void>();
 
   const renderVizProposal = () => {
     if (!vizMetaProposed) {
@@ -39,7 +61,7 @@ const ColDropdown = (
     }
 
     return <div className="col-dropdown-pane-item" key="viz">
-      <span className="col-action-hint">Visualize...</span>
+      <span className="col-action-hint">Visualize:</span>
       <wired-listbox
           style={{ width: '100%' }}
           multiselect={true}
@@ -82,7 +104,7 @@ const ColDropdown = (
               }}
           />
       ))}
-    </div>
+    </div>;
   }
 
   const isSelected = !!filters?.find(f => f.q());
@@ -93,9 +115,11 @@ const ColDropdown = (
       className="col-dropdown"
       toggle={<img className="col-icon" src={icon} alt={''}/>}
       content={<div ref={contentRef} className="col-dropdown-content">
+        <span className="col-action-title">{col}</span>
         {renderVizProposal()}
         {renderFilterProposal()}
       </div>}
+      onToggle={fixDropdownContentPosition}
   />;
 }
 

@@ -1,4 +1,5 @@
 import { customElement } from 'lit-element';
+import { select } from 'd3-selection';
 import { scaleBand, ScaleLinear, scaleLinear } from 'd3-scale';
 import { axisBottom, axisLeft } from 'd3-axis';
 import { AxisDefinition, WiredBaseGraph } from './wired-base-graph';
@@ -118,7 +119,14 @@ export class WiredHistogram extends WiredBaseGraph {
 
           return `${left + margin + group.margin + i * group.w + j * bar.w}px`;
         })
-        .style('width', `${bar.w}px`);
+        .style('width', `${bar.w}px`)
+        .each(function () {
+          const value = parseFloat(( this as HTMLElement ).getAttribute('value') ?? '0');
+          // @ts-ignore
+          select(( this as HTMLElement ).shadowRoot).select('#label')
+              .style('bottom', `${Math.max(10, Math.floor(value - 100))}px`)
+              .style('top', 'unset');
+        });
   }
 
   /**

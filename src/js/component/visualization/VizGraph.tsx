@@ -110,7 +110,7 @@ const VizGraph = (props: VizGraphProps) => {
           // remember and remove id. all other entries go to values
           const id = d.id;
           const label = select(meta.labelselector, d) || d.id;
-          const selected = isSelected(d);
+          const selected = isSelected?.(d);
           const values: { [p: string]: number } = Object
               .fromEntries(
                   Object.entries(d)

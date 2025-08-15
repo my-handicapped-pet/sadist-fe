@@ -1,4 +1,10 @@
-import { css, customElement, property, PropertyValues } from 'lit-element';
+import {
+  css,
+  customElement,
+  LitElement,
+  property,
+  PropertyValues
+} from 'lit-element';
 import {
   Feature,
   FeatureCollection,
@@ -439,6 +445,15 @@ export class WiredGlobe extends WiredBaseGraph {
         .style('height', function (d) {
           const { r } = d;
           return `${2 * r}px`;
+        })
+        .each(function (datum) {
+          // bringing a marker from the dark side of the globe requires requestUpdate()
+          if (this instanceof LitElement
+              // && this.style.display === 'none'
+              && datum.z >= 0
+              ) {
+            this.requestUpdate();
+          }
         });
   }
 

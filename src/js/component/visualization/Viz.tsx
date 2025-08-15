@@ -65,7 +65,6 @@ const Viz = (props: VizProps) => {
               style={{ height: style?.height }}
               meta={vizMeta}
               data={vizData}
-              id="root"
               filters={dsInfo.filters}
               dispatchDsInfo={dispatchDsInfo}
           /> :

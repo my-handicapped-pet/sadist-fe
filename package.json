@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "cd wired-elements && npm run test && cd .. && playwright test",
+    "test": "playwright test",
     "build": "cd wired-elements && npm i && npm run build && cd .. && webpack --mode production ",
     "build-n-copy": "cd wired-elements && npm i && npm run build && cd .. && webpack --mode production && cp -r dist/*.js  dist/*.geojson  dist/*.png  dist/*.ico  dist/*.ttf ../sadist-be/app/static ",
     "start": "webpack serve --mode development --open",

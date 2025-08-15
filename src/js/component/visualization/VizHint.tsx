@@ -1,7 +1,7 @@
 import React, { Dispatch } from 'react';
 import moment from 'moment/moment';
 import CountDown from './CountDown';
-import { DsInfo } from '../../model/ds';
+import { DsInfo, VizGraphMeta } from '../../model/ds';
 import { DsInfoAction, DsInfoActionType } from '../../reducer/dsInfo-reducer';
 
 interface VizHintProps {
@@ -86,13 +86,15 @@ const VizHint: React.FC<VizHintProps> = ({
                 status = <>
                   {
                     dsInfo.vizMetaProposedByCol?.[col]
+                        // only show graphs, not points
+                        ?.filter((vizMeta) => (vizMeta as VizGraphMeta).type)
                         ?.map((vizMeta, i) => {
                           const link = <a
                               key={vizMeta.key}
                               className="bare"
                               onClick={() => dispatchDsInfo({
-                                type: DsInfoActionType.ADD_VIZ,
-                                vizMeta
+                                type: DsInfoActionType.APPEND_VIZ,
+                                addVizMetas: [vizMeta],
                               })}>{vizMeta.stringrepr}
                           </a>
                           return i == 0 ? link : <>, {link}</>;

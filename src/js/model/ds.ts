@@ -3,8 +3,6 @@
  * that will be extended while implementing
  */
 export type VizType =
-    'marker' |
-    'bar' |
     'histogram' |
     'globe';
 
@@ -218,40 +216,31 @@ export type GroupProps = ( ColSpecificProps | {} ) & {
  */
 export type VizProps = AccumulateProps | GroupProps;
 
-/**
- * Meta information about visualization which defines
- * both visualization pipeline request to the server and
- * (together with visualization data from the server) rendering.
- * Visualization is a hierarchy of graphs, e.g. a histogram
- * has a child graph of type bar or several of them, which
- * positioning and style are defined by the parent graph
- * but rendering is defined by the child graph and data is
- * defined by the visualization data on a child level
- */
-export interface VizMeta {
+interface VizBaseMeta {
   /**
    * Key of the visualization graph, if many
    * of them appears on the same level. Can be used
    * in the hints, legend etc.
    */
   key: string;
-  /**
-   * visualization type, see {@link VizType}
-   */
-  type: VizType;
-  /**
-   * properties of visualization, depending on the type
-   */
-  props: VizProps;
-  /**
-   * child graphs
-   */
-  children?: { [k: string]: VizMeta };
 
   /**
    * String representation is used in UI
    */
   stringrepr?: string;
+}
+
+/**
+ * Meta information about a graph which defines
+ * both visualization pipeline request to the server and
+ * (together with visualization data from the server) rendering.
+ * Visualization is a hierarchy of graphs, e.g. a histogram
+ * has a child graph or several of them, which
+ * positioning and style are defined by the parent graph
+ * but rendering is defined by the child graph and data is
+ * defined by the visualization data on a child level
+ */
+export interface VizGraphMeta extends VizBaseMeta {
 
   /**
    * Selector for label of a visualization item in the graph, in format of
@@ -259,7 +248,33 @@ export interface VizMeta {
    * If not defined, {@link VizDataItem.id} will be used
    */
   labelselector?: string;
+  /**
+   * visualization type, see {@link VizType}
+   */
+  type: VizType;
+  /**
+   * properties of visualization graph
+   */
+  props: GroupProps;
+  /**
+   * child graphs
+   */
+  children?: { [k: string]: VizMeta };
 }
+
+export interface VizPointMeta extends VizBaseMeta {
+  /**
+   * properties of visualization point
+   */
+  props: AccumulateProps;
+
+  /**
+   * Just to use in the VizMeta interface
+   */
+  children?: {};
+}
+
+export type VizMeta = VizGraphMeta | VizPointMeta;
 
 /**
  * Item of {@link VizPipeline}
@@ -282,13 +297,18 @@ export type VizPipeline = VizPipelineItem[];
 export interface VizDataItem {
   id: any;
 
-  [k: string]: VizData;
+  [k: string]: VizDataValue;
 }
+
+/**
+ * Value of each element of VizData. Currently either number or nested graph
+ */
+export type VizDataValue = number | VizData;
 
 /**
  * Visualization data returned by server
  */
-export type VizData = VizDataItem[] | number;
+export type VizData = VizDataItem[];
 
 /**
  * Filter by selecting one or more of multiple values
@@ -532,7 +552,7 @@ export interface DsInfo {
    * Visualization selected by a user, can be combined as Lego
    * by hints on column drop-downs or on visualization area
    */
-  vizMeta?: VizMeta;
+  vizMeta?: VizGraphMeta;
 
   /**
    * Filters, both proposed and selected by a user
@@ -568,12 +588,13 @@ export interface DsInfo {
   init(info: DsInfoInit): DsInfo;
 
   /**
-   * Add proposed graph to visualization.
+   * Add/remove proposed graph(s) to visualization.
    * Can append as a child, or replace, or do some custom logic,
    * depending on graph's nature.
-   * @param vizMeta
+   * @param addVizMetas
+   * @param removeVizMetas
    */
-  appendViz(vizMeta: VizMeta): VizMeta | undefined;
+  appendViz(addVizMetas: VizMeta[], removeVizMetas: VizMeta[]): VizGraphMeta | undefined;
 
   /**
    * Check if a certain graph is included to the current

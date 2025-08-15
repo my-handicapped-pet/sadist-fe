@@ -2,18 +2,24 @@ import React, { forwardRef, ReactNode, useEffect, useImperativeHandle, useRef, u
 
 
 interface DropdownProps {
-  className?: string,
-  toggle: ReactNode,
-  content: ReactNode,
+  className?: string;
+  toggle: ReactNode;
+  content: ReactNode;
+
+  /**
+   * Fire when user toggles (opens or closes) dropdown
+   */
+  onToggle?(open: boolean): any;
 }
 
 interface DropdownElement {
+  open: boolean;
   expand(): void;
   collapse(): void;
 }
 
 const __Dropdown: React.ForwardRefRenderFunction<DropdownElement, DropdownProps> = (
-  { className, toggle, content }: DropdownProps,
+  { className, toggle, content, onToggle }: DropdownProps,
   ref: React.ForwardedRef<DropdownElement>
 ) => {
   const root = useRef<HTMLDivElement | null>(null);
@@ -23,6 +29,7 @@ const __Dropdown: React.ForwardRefRenderFunction<DropdownElement, DropdownProps>
   const [open, setOpen] = useState(false);
 
   useImperativeHandle(ref, () => ( {
+    open,
     expand: () => setOpen(true),
     collapse: () => setOpen(false),
   } ));
@@ -52,8 +59,12 @@ const __Dropdown: React.ForwardRefRenderFunction<DropdownElement, DropdownProps>
     }
   }, [root.current, pane.current, open])
 
-  const onOpen = (event: React.MouseEvent<HTMLAnchorElement>) => {
-    event.stopPropagation();
+  useEffect(() => {
+    onToggle?.(open);
+  }, [open]);
+
+  const onOpen = (_event: React.MouseEvent<HTMLAnchorElement>) => {
+    // event.stopPropagation();
     setOpen(x => !x);
   };
 

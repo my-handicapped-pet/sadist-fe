@@ -20,8 +20,10 @@ export class WiredListbox extends WiredBase {
     return this.selectedValue;
   }
 
+  @property({ type: Boolean }) multiselect = false;
+
   set value(value: ListboxValue | undefined) {
-    this.select(value?.value);
+    this.select(value?.value, {});
     this.selectedValue = value;
     this.requestUpdate();
   }
@@ -31,7 +33,7 @@ export class WiredListbox extends WiredBase {
   }
 
   set selected(selected: string | undefined) {
-    this.select(selected);
+    this.select(selected, {});
     this.selectedValue = this.getListboxValue(this.selectedItem) ||
         ( selected ? { value: selected, text: '' } : undefined );
     this.requestUpdate();
@@ -97,12 +99,12 @@ export class WiredListbox extends WiredBase {
         case 37:
         case 38:
           event.preventDefault();
-          this.selectPrevious();
+          this.selectPrevious(event);
           break;
         case 39:
         case 40:
           event.preventDefault();
-          this.selectNext();
+          this.selectNext(event);
           break;
       }
     });
@@ -125,46 +127,90 @@ export class WiredListbox extends WiredBase {
     return undefined;
   }
 
-  private select(item: WiredListboxItem | string | undefined) {
+  private select(item: WiredListboxItem | string | undefined, p: {
+    shiftKey?: boolean;
+    ctrlKey?: boolean
+  }): { selected: string[], unselected: string[] } {
     // if string, find an actual item
     if (typeof item == 'string') {
       item = this.getItem(item);
     }
 
+    const selected: string[] = [];
+    const unselected: string[] = [];
+
+    if (p.ctrlKey && this.multiselect && item) {
+      // change selected to the opposite
+      item.selected = !item.selected;
+      if (item.selected) {
+        item.setAttribute('aria-selected', 'true');
+        selected.push(item.value);
+      } else {
+        item.removeAttribute('aria-selected');
+        unselected.push(item.value);
+      }
+      return { selected, unselected };
+    }
+
+    if (p.shiftKey && this.multiselect && item && this.selectedItem) {
+      // select everything between this.selectedItem and item
+      const i1 = this.itemNodes.indexOf(item);
+      const i2 = this.itemNodes.indexOf(this.selectedItem);
+      for (let i = Math.min(i1, i2); i <= Math.max(i1, i2); i++) {
+        this.itemNodes[i].selected = true;
+        this.itemNodes[i].setAttribute('aria-selected', 'true');
+        selected.push(item.value);
+      }
+      // TODO unselect the interval previously selected with shift
+      return { selected, unselected };
+    }
+
     if (this.selectedItem) {
       this.selectedItem.selected = false;
       this.selectedItem.removeAttribute('aria-selected');
+      unselected.push(this.selectedItem.value);
     }
     if (item) {
       item.selected = true;
       item.setAttribute('aria-selected', 'true');
+      selected.push(item.value);
     }
     this.selectedItem = item;
+    return { selected, unselected };
   }
 
-  private fireSelected() {
+  private fireSelected(p: { selected: string[]; unselected: string[] }) {
     this.selectedValue = this.getListboxValue(this.selectedItem);
-    fire(this, 'selected', { selected: this.selected });
+    let detail: { selected: string | string[], unselected?: string[] };
+    if (!this.multiselect) {
+      detail = { selected: this.selected };
+    } else {
+      detail = { selected: p.selected, unselected: p.unselected };
+    }
+    fire(this, 'selected', detail);
   }
 
-  private onItemClick(event: Event) {
+  private onItemClick(event: MouseEvent | KeyboardEvent) {
     event.stopPropagation();
-    this.select(event.target as WiredListboxItem);
-    this.fireSelected();
+    const { shiftKey, ctrlKey } = event;
+    const { selected, unselected } = this.select(event.target as WiredListboxItem, { shiftKey, ctrlKey });
+    this.fireSelected({ selected, unselected });
   }
 
-  private selectPrevious() {
+  private selectPrevious(event: KeyboardEvent) {
     const item = this.selectedItem?.previousElementSibling ?
       this.selectedItem.previousElementSibling : this.itemNodes[this.itemNodes.length - 1];
-    this.select(item as WiredListboxItem);
-    this.fireSelected();
+    const { shiftKey, ctrlKey } = event;
+    const { selected, unselected } = this.select(item as WiredListboxItem, { shiftKey, ctrlKey });
+    this.fireSelected({ selected, unselected });
   }
 
-  private selectNext() {
+  private selectNext(event: KeyboardEvent) {
     const item = this.selectedItem?.nextElementSibling ?
       this.selectedItem.nextElementSibling : this.itemNodes[0];
-    this.select(item as WiredListboxItem);
-    this.fireSelected();
+    const { shiftKey, ctrlKey } = event;
+    const { selected, unselected } = this.select(item as WiredListboxItem, { shiftKey, ctrlKey });
+    this.fireSelected({ selected, unselected });
   }
 
   private onSlotChanged() {
@@ -178,7 +224,7 @@ export class WiredListbox extends WiredBase {
           node.setAttribute('role', 'option');
           this.itemNodes.push(node);
           if (node.value === this.selected) {
-            this.select(node);
+            this.select(node, {});
             this.selectedValue = this.getListboxValue(node);
           }
         }

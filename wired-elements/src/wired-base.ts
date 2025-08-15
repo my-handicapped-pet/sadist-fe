@@ -1,6 +1,7 @@
 import { css, LitElement, PropertyValues, query } from "lit-element";
 import {
-  debugLog, ellipse,
+  debugLog,
+  ellipse,
   hachureFill,
   Point,
   polygon,
@@ -45,7 +46,9 @@ export abstract class WiredBase extends LitElement {
   static resizeobserver = new ResizeObserver((entries, _observer) => {
     for (let entry of entries) {
       if (entry.target instanceof WiredBase) {
-        entry.target.updated();
+        const changed = new Map();
+        changed.set('size', entry.target.lastSize);
+        entry.target.updated(changed);
       }
     }
   });
@@ -55,7 +58,7 @@ export abstract class WiredBase extends LitElement {
     WiredBase.resizeobserver.observe(this);
   }
 
-  updated(changed?: PropertyValues) {
+  protected updated(changed?: PropertyValues) {
     if (this.svg) {
       // condition to render: size is changed
       const point = this.getSize();
@@ -71,6 +74,16 @@ export abstract class WiredBase extends LitElement {
       this.renderWiredShapes();
       this.lastSize = point;
       this.classList.add('wired-rendered');
+    }
+  }
+
+  protected performUpdate(): void | Promise<unknown> {
+    // see https://github.com/lit/lit-element/issues/953 for error handling approach
+    try {
+      super.performUpdate();
+      this.dispatchEvent(new CustomEvent('update'));
+    } catch (err) {
+      this.dispatchEvent(new CustomEvent('error', { detail: err }));
     }
   }
 

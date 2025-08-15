@@ -125,8 +125,8 @@ export class WiredDualSlider extends WiredBase {
     delete this.pendingValueMax;
   }
 
-  updated(_changed?: PropertyValues) {
-    super.updated(_changed);
+  protected updated(changed?: PropertyValues) {
+    super.updated(changed);
     // since underlying `wired-slider`s are absolutely positioned,
     // have to set height by the script; todo check if it will work with resize
     this.style.height = `${this.sliderMin?.getBoundingClientRect().height}px`;

@@ -143,6 +143,7 @@ wired-dialog#error-dialog {
 .error {
   width: 100%;
   padding: 5px;
+  overflow-x: scroll;
   background-color: #888888;
   color: maroon;
 }
@@ -192,7 +193,7 @@ wired-dialog#error-dialog {
 }
 
 .hotkey-helper {
-  position: absolute;
+  position: fixed;
   top: 30px;
   left: 20px;
   width: 200px;
@@ -300,7 +301,7 @@ img.col-icon {
 
 .col-dropdown-content {
   position: fixed;
-  z-index: 99;
+  z-index: 110;
   background: #ccc;
   min-width: 160px;
   max-width: 200px;
@@ -314,6 +315,11 @@ img.col-icon {
   font-size: 8pt;
   display: block;
   margin-right: 20px;
+}
+
+.col-action-title {
+  @extend .col-action-hint;
+  text-decoration: underline;
 }
 
 .col-dropdown wired-checkbox {

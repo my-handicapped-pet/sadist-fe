@@ -89,8 +89,8 @@ export class WiredCheckbox extends WiredBase {
     `;
   }
 
-  updated(_changed?: PropertyValues) {
-    super.updated(_changed);
+  protected updated(changed?: PropertyValues) {
+    super.updated(changed);
     this.refreshCheckVisibility();
   }
 

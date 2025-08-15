@@ -1,14 +1,19 @@
-import { css, customElement, property, PropertyValues } from 'lit-element';
+import {
+  css,
+  customElement,
+  LitElement,
+  property,
+  PropertyValues
+} from 'lit-element';
 import {
   Feature,
   FeatureCollection,
   GeoJsonProperties,
   Geometry
 } from 'geojson';
+import { scaleSqrt } from 'd3-scale';
 import { debugLog, line, svgNode } from './wired-lib';
-import { WiredBaseGraph } from './wired-base-graph';
-import { DataPoint, WiredDataPoint } from './wired-data-point';
-import { WiredBar } from './wired-bar';
+import { DataPoint, WiredBaseGraph } from './wired-base-graph';
 
 type SvgClassName =
     'net' |
@@ -70,8 +75,8 @@ export class WiredGlobe extends WiredBaseGraph {
     `;
   }
 
-  protected firstUpdated(_changedProperties: PropertyValues) {
-    super.firstUpdated(_changedProperties);
+  protected firstUpdated(changed: PropertyValues) {
+    super.firstUpdated(changed);
     fetch(this['geojson'])
         .then(result => result.json())
         .then(value => {
@@ -79,13 +84,14 @@ export class WiredGlobe extends WiredBaseGraph {
           this.requestUpdate();
         });
 
-    this.addEventListener('mousedown', this.onMouseDown);
-    this.addEventListener('mouseup', this.onMouseUp);
-    this.addEventListener('mousemove', this.onMouseMove2); //another listener to avoid conflict with parent
-    this.addEventListener('wheel', this.onWheel);
+    // mouse events on globe. they are distinct from the events on data points.
+    this.addEventListener('mousedown', this.onMouseDownOnGraph);
+    this.addEventListener('mouseup', this.onMouseUpOnGraph);
+    this.addEventListener('mousemove', this.onMouseMoveOnGraph);
+    this.addEventListener('wheel', this.onWheelOnGraph);
   }
 
-  updated(changedProperties?: PropertyValues) {
+  protected updated(changedProperties?: PropertyValues) {
     const lastSize = [...this.lastSize];
 
     super.updated(changedProperties);
@@ -126,26 +132,20 @@ export class WiredGlobe extends WiredBaseGraph {
     }
     debugLog(`coastline: ${Date.now() - t}`);
 
-    if (changedProperties?.has('data-point-r')) {
-      this.updateScale();
+    // if eye or r changed, we need to re-pose data
+    if (changedProperties?.has('r') || changedProperties?.has('eye')) {
+      this.poseData();
     }
-
-    this.poseData();
   }
 
-  protected getBase(): number {
-    let tag = '', base = this['data-point-r'];
+  get datapoints() {
+    return super.datapoints?.filter(this.isGeoDataPoint);
+  }
 
-    // before we refactored scales, consider scale linear/quadratic
-    // depending on the data points' tag
-    this.datapoints?.forEach((dp) => {
-      tag = dp.element.tagName.toUpperCase();
-    });
-    if (tag === 'WIRED-MARKER') {
-      base = this['data-point-r'] * this['data-point-r'];
-    }
-
-    return base;
+  protected getBaseScale() {
+    // let use marker as a point, so scale will be quadratic.
+    // further we can use other such as color, etc.
+    return scaleSqrt([0, this['data-point-r']]);
   }
 
   protected removeWiredShapesByClass(className: SvgClassName): void {
@@ -397,73 +397,81 @@ export class WiredGlobe extends WiredBaseGraph {
 
   protected isGeoDataPoint(dp: DataPoint): boolean {
     // TODO consider other types of geo data points, e.g. rectangles
-    return dp.id && typeof dp.id.loc == 'object'
-        && dp.id.loc.type == 'Point'
-        && dp.id.loc.coordinates
-        && typeof dp.id.loc.coordinates[0] == 'number'
-        && typeof dp.id.loc.coordinates[1] == 'number';
-  }
-
-  get datapoints(): DataPoint[] | undefined {
-    return super.datapoints?.filter(dp => this.isGeoDataPoint(dp));
+    const id = dp['data-id'];
+    return id && typeof id.loc == 'object'
+        && id.loc.type == 'Point'
+        && id.loc.coordinates
+        && typeof id.loc.coordinates[0] == 'number'
+        && typeof id.loc.coordinates[1] == 'number';
   }
 
   get nonGeoDatapoints(): DataPoint[] | undefined {
-    return super.datapoints?.filter(dp => !this.isGeoDataPoint(dp));
+    return super.datapoints?.filter((dp: DataPoint) => !this.isGeoDataPoint(dp));
   }
 
   protected poseData(): void {
     const rect = this.getBoundingClientRect();
 
-    this.nonGeoDatapoints?.forEach(dp => {
-      dp.element.style.display = 'none';
-    });
-
-    this.groups.forEach(({ id, nodes }) => {
-      let [x, y, z] = this.xyz([id.loc.coordinates[0], id.loc.coordinates[1]]);
-      let w = Math.floor(2 * this['data-point-r'] / this.legend.length);
-      let margin0 = 0;
-      if (this.groups[0]?.nodes[0]?.tagName == 'WIRED-BAR' && w > .1 * 2 * this['data-point-r']) {
-        // make a bar not wider than .1 of its possible maximum height
-        w = Math.floor(.1 * 2 * this['data-point-r']);
-        margin0 = Math.ceil((2 * this['data-point-r'] - this.legend.length * w) / 2);
-        // make a bar "grow" from the center of the location
-        y -= this['data-point-r'];
-      }
-      this.legend.forEach(({}, j) => {
-        const display = nodes[j].style.display;
-        nodes[j].style.position = 'absolute';
-        nodes[j].style.display = ( z >= 0 && 0 <= x && x <= rect.width && 0 <= y && y <= rect.height ) ? 'block' : 'none';
-        nodes[j].style.left = `${x - this['data-point-r'] + margin0 + j * w}px`;
-        nodes[j].style.top = `${y - this['data-point-r']}px`;
-        nodes[j].style.width = `${w}px`;
-        nodes[j].style.height = `${2 * this['data-point-r']}px`;
-        if (nodes[j].tagName == 'WIRED-BAR') {
-          // make a bar selectable on visible area only
-          ( nodes[j] as WiredBar )['selectable-area'] = 'filled';
-        }
-        if (( display === 'none' ) && ( nodes[j].style.display !== 'none' )) {
-          ( nodes[j] as WiredDataPoint ).requestUpdate();
-        }
-      })
-    });
+    // extend selection data to include x, y, z, r
+    this.selectData(this.datapoints?.map((d) => {
+      const id = d['data-id'];
+      const [x, y, z] = this.xyz([id.loc.coordinates[0], id.loc.coordinates[1]]);
+      const r = Math.floor(Math.max(10, d.scale(d['data-value'])));
+      return { ...d, x, y, z, r };
+    }))?.join('wired-marker')
+        .text(this.getDataPointText)
+        .attr('selected', this.getDataPointSelected)
+        .style('--color', (d) => {
+          return this.legend
+              .find((l) => l.name === d['data-name'])?.style?.color ?? 'black';
+        })
+        .style('position', 'absolute')
+        .style('display', function (d) {
+          const { x, y, z } = d;
+          return 0 <= z && 0 <= x && x <= rect.width && 0 <= y && y <= rect.height ? 'block' : 'none';
+        })
+        .style('left', function (d) {
+          const { x, r } = d;
+          return `${x - r}px`;
+        })
+        .style('top', function (d) {
+          const { y, r } = d;
+          return `${y - r}px`;
+        })
+        .style('width', function (d) {
+          const { r } = d;
+          return `${2 * r}px`;
+        })
+        .style('height', function (d) {
+          const { r } = d;
+          return `${2 * r}px`;
+        })
+        .each(function (datum) {
+          // bringing a marker from the dark side of the globe requires requestUpdate()
+          if (this instanceof LitElement
+              // && this.style.display === 'none'
+              && datum.z >= 0
+              ) {
+            this.requestUpdate();
+          }
+        });
   }
 
-  protected onMouseDown(event: MouseEvent) {
+  protected onMouseDownOnGraph(event: MouseEvent) {
     if (event.button === 0) {
       this.style.cursor = 'grabbing';
       this.grabpoint = [event.clientX, event.clientY];
     }
   }
 
-  protected onMouseUp(event: MouseEvent) {
+  protected onMouseUpOnGraph(event: MouseEvent) {
     if (event.button === 0) {
       this.style.cursor = 'grab';
       this.grabpoint = undefined;
     }
   }
 
-  protected onMouseMove2(event: MouseEvent) {
+  protected onMouseMoveOnGraph(event: MouseEvent) {
     if (this.grabpoint) {
       const oldValue = [...this.eye];
       const x = event.clientX;
@@ -486,7 +494,7 @@ export class WiredGlobe extends WiredBaseGraph {
     }
   }
 
-  protected onWheel(event: WheelEvent) {
+  protected onWheelOnGraph(event: WheelEvent) {
     const R_MIN = 10;
     const R_MAX = 10000;
 

@@ -1,6 +1,6 @@
 {
   "$id": "viz",
-  "$ref": "#/definitions/viz",
+  "$ref": "#/definitions/VizMeta",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
     "AccumulateProps": {
@@ -409,9 +409,9 @@
         "null"
       ]
     },
-    "VizMeta": {
+    "VizGraphMeta": {
       "additionalProperties": false,
-      "description": "Meta information about visualization which defines both visualization pipeline request to the server and (together with visualization data from the server) rendering. Visualization is a hierarchy of graphs, e.g. a histogram has a child graph of type bar or several of them, which positioning and style are defined by the parent graph but rendering is defined by the child graph and data is defined by the visualization data on a child level",
+      "description": "Meta information about a graph which defines both visualization pipeline request to the server and (together with visualization data from the server) rendering. Visualization is a hierarchy of graphs, e.g. a histogram has a child graph or several of them, which positioning and style are defined by the parent graph but rendering is defined by the child graph and data is defined by the visualization data on a child level",
       "properties": {
         "children": {
           "additionalProperties": {
@@ -429,8 +429,8 @@
           "type": "string"
         },
         "props": {
-          "$ref": "#/definitions/VizProps",
-          "description": "properties of visualization, depending on the type"
+          "$ref": "#/definitions/GroupProps",
+          "description": "properties of visualization graph"
         },
         "stringrepr": {
           "description": "String representation is used in UI",
@@ -443,34 +443,55 @@
       },
       "required": [
         "key",
-        "type",
+        "props",
+        "type"
+      ],
+      "type": "object"
+    },
+    "VizMeta": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/VizGraphMeta"
+        },
+        {
+          "$ref": "#/definitions/VizPointMeta"
+        }
+      ]
+    },
+    "VizPointMeta": {
+      "additionalProperties": false,
+      "properties": {
+        "children": {
+          "additionalProperties": false,
+          "description": "Just to use in the VizMeta interface",
+          "type": "object"
+        },
+        "key": {
+          "description": "Key of the visualization graph, if many of them appears on the same level. Can be used in the hints, legend etc.",
+          "type": "string"
+        },
+        "props": {
+          "$ref": "#/definitions/AccumulateProps",
+          "description": "properties of visualization point"
+        },
+        "stringrepr": {
+          "description": "String representation is used in UI",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
         "props"
       ],
       "type": "object"
     },
-    "VizProps": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/AccumulateProps"
-        },
-        {
-          "$ref": "#/definitions/GroupProps"
-        }
-      ],
-      "description": "Properties of visualization data retrieving, such as interval and granularity for grouping ect."
-    },
     "VizType": {
       "description": "Type of visualization such as histogram, trend, timeline etc., that will be extended while implementing",
       "enum": [
-        "marker",
-        "bar",
         "histogram",
         "globe"
       ],
       "type": "string"
-    },
-    "viz": {
-      "$ref": "#/definitions/VizMeta"
     }
   }
 }

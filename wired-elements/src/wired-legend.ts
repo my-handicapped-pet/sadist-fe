@@ -3,7 +3,7 @@ import { WiredBase } from './wired-base';
 
 @customElement('wired-legend')
 export class WiredLegend extends WiredBase {
-  @property({ type: Object })
+  @property({ type: Object, reflect: false })
   legend: { name: string; style?: { [p: string]: string; }; }[] = [];
 
   static get styles(): CSSResult {

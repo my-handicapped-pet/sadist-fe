@@ -12,21 +12,37 @@ import {
   Geometry
 } from 'geojson';
 import { scaleSqrt } from 'd3-scale';
+import { debounce } from 'dettle';
 import { debugLog, line, svgNode } from './wired-lib';
 import { DataPoint, WiredBaseGraph } from './wired-base-graph';
 
+type FeatureClassName = 'coastline' |
+    'country' |
+    'province' |
+    'river' |
+    'lake' |
+    'road' |
+    'railroad' |
+    'residence';
 type SvgClassName =
     'net' |
-    'coastline';
+    FeatureClassName;
 
 @customElement('wired-globe')
 export class WiredGlobe extends WiredBaseGraph {
   proportion = 1;
 
   /**
-   * Url of geojson data
+   * Url of geojson data. Always has the :featureclass substitute,
+   * and lng, lat, radius parameters are sent in query string
    */
-  @property({ type: String }) ['geojson']: string = '/static/map.geojson';
+  @property({ type: String }) ['geojson']: string = '/map/features/:featureclass';
+
+  /**
+   * Feature classes that are requested from the server
+   */
+  @property({ type: Array, reflect: false }) featureclasses: FeatureClassName[] =
+      ['coastline', 'country'];
 
   /**
    * Spherical coordinates of the eye point, in degrees
@@ -43,10 +59,8 @@ export class WiredGlobe extends WiredBaseGraph {
    */
   @property({ type: Number }) ['data-point-r']: number = 100;
 
-  protected coastline?: Array<Feature<Geometry, GeoJsonProperties>>;
-  protected svgByClass: { [c in SvgClassName]: SVGElement[]; } = {
-    'net': [],
-    'coastline': [],
+  protected featuresByClass: { [c in FeatureClassName]?: Array<Feature<Geometry, GeoJsonProperties>> } = {};
+  protected svgByClass: { [c in SvgClassName]?: SVGElement; } = {
   };
   private grabpoint?: [number, number];
   protected xc: number = 0;
@@ -64,25 +78,25 @@ export class WiredGlobe extends WiredBaseGraph {
       }
 
       .coastline {
-        stroke: #292929;
-        stroke-width: 3;
         fill: #80d080;
       }
 
-      .coastline.hole {
-        fill: #fff;
+      .lake, .river, .coastline.hole {
+        fill: #00d0ff;
       }
+      
+      .country {
+        stroke: #292929;
+        stroke-width: 3;
+        fill: none;
+      }
+      
+      .country.caption {}
     `;
   }
 
   protected firstUpdated(changed: PropertyValues) {
     super.firstUpdated(changed);
-    fetch(this['geojson'])
-        .then(result => result.json())
-        .then(value => {
-          this.coastline = ( value as FeatureCollection ).features;
-          this.requestUpdate();
-        });
 
     // mouse events on globe. they are distinct from the events on data points.
     this.addEventListener('mousedown', this.onMouseDownOnGraph);
@@ -107,7 +121,7 @@ export class WiredGlobe extends WiredBaseGraph {
 
     // draw coordinates net
     let t = Date.now();
-    this.removeWiredShapesByClass('net');
+    this.removeByClass('net');
     for (let lat = 80; lat > -90; lat -= 20) {
       let step = 10;
       for (let lng = -180; lng < 180; lng += step) {
@@ -122,18 +136,28 @@ export class WiredGlobe extends WiredBaseGraph {
     }
     debugLog(`net: ${Date.now() - t}`);
 
-    // draw coastline
-    t = Date.now();
-    this.removeWiredShapesByClass('coastline');
-    if (this.coastline) {
-      for (const feature of this.coastline) {
-        this._feature(feature, 'coastline');
-      }
-    }
-    debugLog(`coastline: ${Date.now() - t}`);
+    // if eye or r changed, we need re-draw features and to re-pose data
+    if (changedProperties?.has('r') || changedProperties?.has('eye')
+        || changedProperties?.has('featureclasses')) {
+      // 0. if featureclasses has changed, create g groups for the classes.
+      // features are placed in the same order that featureclasses are listed
+      if (changedProperties?.has('featureclasses')) {
+        // remove existing groups, beside of "net"
+        for (const className of Object.keys(this.svgByClass))
+          if (className !== 'net') this.removeSvgClass(className as SvgClassName);
 
-    // if eye or r changed, we need to re-pose data
-    if (changedProperties?.has('r') || changedProperties?.has('eye')) {
+        //add new groups
+        for (const className of this.featureclasses)
+          this.createSvgClass(className);
+      }
+
+      // 1. re-draw the features using current features
+      for (const className of this.featureclasses) this.drawByClass(className);
+
+      // 2. re-request features form the server with new coordinates or scale
+      this.fetchFeatures();
+
+      // 3. re-pose data points
       this.poseData();
     }
   }
@@ -148,14 +172,74 @@ export class WiredGlobe extends WiredBaseGraph {
     return scaleSqrt([0, this['data-point-r']]);
   }
 
-  protected removeWiredShapesByClass(className: SvgClassName): void {
-    let svg;
-    while (svg = this.svgByClass[className].pop()) {
-      if (svg.parentNode == this.svg) {
-        this.svg?.removeChild(svg);
-      }
+  protected svgClass(className?: SvgClassName): SVGElement {
+    // svg class is a g element that groups elements of the given class,
+    // to maintain order of the elements
+
+    // for classless elements, place them to the root
+    if (!className) {
+      return this.svg!;
+    }
+
+    // make it safe
+    if (!this.svgByClass[className]) {
+      this.createSvgClass(className);
+    }
+    return this.svgByClass[className]!;
+  }
+
+  protected createSvgClass(className: SvgClassName): void {
+    this.svg?.appendChild(this.svgByClass[className] = svgNode('g'));
+  }
+
+  protected removeSvgClass(className: SvgClassName): void {
+    if (this.svgByClass[className] && this.svgByClass[className]?.parentNode === this.svg) {
+      this.svg?.removeChild(this.svgByClass[className]!);
     }
   }
+
+  protected drawByClass(className: FeatureClassName) {
+    const t = Date.now();
+    this.removeByClass(className);
+    if (this.featuresByClass[className]) {
+      for (const feature of this.featuresByClass[className]!) {
+        this._feature(feature, className);
+      }
+    }
+    debugLog(`${className}: ${Date.now() - t}`);
+    return t;
+  }
+
+  protected removeByClass(className: SvgClassName): void {
+    let svg;
+    while (svg = this.svgByClass[className]?.lastChild) {
+      this.svgByClass[className]?.removeChild(svg);
+    }
+  }
+
+  fetchFeatures = debounce(() => {
+    const lng = -90 - this.eye[0];
+    const lat = this.eye[1];
+    const radius = Math.min(
+        2 * Math.atan2(Math.hypot(this.xc, this.yc), this.r),
+        Math.PI / 2
+    );
+
+    for (const className of this.featureclasses) {
+      fetch(this.geojson.replace(':featureclass', className) +
+          '?' + `lng=${lng}&lat=${lat}&radius=${radius}`)
+          .then(result => result.json())
+          .then(value => {
+            if (value.error) throw new Error(value.error);
+            this.featuresByClass[className] = ( value as FeatureCollection ).features;
+            this.drawByClass(className);
+          })
+          .catch((e) => {
+            /* either unhandled exception or our fancy-shmancy 'error' event*/
+            this.dispatchEvent(new CustomEvent('error', { detail: e }));
+          });
+    }
+  }, 1000);
 
   protected xyz([lng, lat]: [number, number]): [number, number, number] {
     // transform coordinates on sphere (longitude, latitude), in degrees,
@@ -233,7 +317,6 @@ export class WiredGlobe extends WiredBaseGraph {
   private _withClass(svg: SVGElement, className?: SvgClassName): SVGElement {
     if (className) {
       svg.classList.add(className);
-      this.svgByClass[className].push(svg);
     }
     return svg;
   }
@@ -244,7 +327,7 @@ export class WiredGlobe extends WiredBaseGraph {
     const [x1, y1, z1] = this.xyz([lng1, lat1]);
     const [x2, y2, z2] = this.xyz([lng2, lat2]);
     if (z1 >= 0 || z2 >= 0) {
-      svg = line(this.svg!, x1, y1, x2, y2);
+      svg = line(this.svgClass(className), x1, y1, x2, y2);
       return this._withClass(svg, className);
     }
     return undefined;
@@ -384,7 +467,7 @@ export class WiredGlobe extends WiredBaseGraph {
       }
 
       const svg = svgNode('path', { d: path });
-      this.svg?.append(svg);
+      this.svgClass(className).append(svg);
       result.push(this._withClass(svg, className));
     }
 

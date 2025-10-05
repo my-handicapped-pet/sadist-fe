@@ -35,6 +35,7 @@
     "d3-axis": "^3.0.0",
     "d3-scale": "^4.0.2",
     "d3-selection": "^3.0.0",
+    "dettle": "^1.0.5",
     "lit-element": "^2.5.1",
     "roughjs": "^3.1.0"
   },

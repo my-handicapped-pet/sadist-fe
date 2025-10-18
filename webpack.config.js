@@ -69,15 +69,6 @@ module.exports = {
       filename: "./tos.html",
       chunks: ["tos"]
     }),
-    // copy GeoJSON separately because it's not imported in the code
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: './assets/*.geojson',
-          to: '[name][ext]',
-        }
-      ]
-    })
   ],
   resolve: {
     extensions: [".js", ".jsx", ".ts", ".tsx"]
@@ -531,12 +522,17 @@ module.exports = {
       });
     },
 
-    // To use sadist-proxy
-    // proxy: {
-    //   '/proxy': {
-    //     target: 'http://localhost:8080',
-    //     router: () => 'http://localhost:8090',
-    //   }
-    // }
+    proxy: {
+      // To use sadist-proxy
+      // '/proxy': {
+      //   target: 'http://localhost:8080',
+      //   router: () => 'http://localhost:8090',
+      // },
+      // To use sadist-map
+      '/map': {
+        target: 'http://localhost:8080',
+        router: () => 'http://localhost:3000',
+      },
+    },
   }
 }

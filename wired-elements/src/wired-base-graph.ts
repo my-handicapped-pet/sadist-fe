@@ -10,7 +10,7 @@ import {
 import { ScaleContinuousNumeric } from 'd3-scale';
 import { BaseType, select, Selection } from 'd3-selection';
 import { Axis } from 'd3-axis';
-import { fire, formatNumber, ncolor, svgNode } from './wired-lib';
+import { fire, formatNumber, ncolor, Point, svgNode } from './wired-lib';
 import { WiredBase } from './wired-base';
 import { WiredShape } from './wired-shape';
 import { WiredLegend } from './wired-legend';
@@ -185,27 +185,21 @@ export abstract class WiredBaseGraph extends WiredBase {
     }
   }
 
-  protected updated(changed?: PropertyValues) {
-    const size = this.lastSize;
+  protected shouldUpdateWiredShapes(size: Point, changed: PropertyValues | undefined): boolean | undefined {
+    return super.shouldUpdateWiredShapes(size, changed) || changed?.has('data');
+  }
 
-    super.updated(changed);
-    const newSize = this.getSize();
-    if (
-        // data has changed
-        changed?.has('data')
-        // or size has changed
-        ||
-        size[0] !== newSize[0] || size[1] !== newSize[1]
-    ) {
-      // prepare for posing data
-      this.prePoseData();
+  protected renderWiredShapes() {
+    super.renderWiredShapes();
 
-      // re-pose data
-      this.poseData();
+    // prepare for posing data
+    this.prePoseData();
 
-      // post pose data
-      this.postPoseData();
-    }
+    // re-pose data
+    this.poseData();
+
+    // post pose data
+    this.postPoseData();
   }
 
   /**

@@ -120,10 +120,10 @@ const DsList = (props: DsListProps) => {
       alt = '[+]';
     } else if (item.extra?.access?.type === 'public') {
       pic = Icon.file;
-      alt = '[📄]';
+      alt = '[o]';
     } else {
       pic = Icon.filePrivate;
-      alt = '[🔒]';
+      alt = '[x]';
     }
     return <wired-item
         key={item.id}

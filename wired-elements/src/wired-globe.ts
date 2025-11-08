@@ -573,6 +573,8 @@ export class WiredGlobe extends WiredBaseGraph {
   }
 
   protected onWheelOnGraph(event: WheelEvent) {
+    event.preventDefault();
+
     const R_MIN = 10;
     const R_MAX = 10000;
 

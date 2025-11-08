@@ -38,7 +38,7 @@ test('open dialog for different Dses', async ({ page, }) => {
   // Switch to a DS with filtering available
   await page.getByRole('button', { name: 'Cancel' }).click();
   await page.getByRole('combobox').filter({ hasText: 'New Data Set 1111 Data Set' }).locator('#textPanel').click();
-  await page.getByRole('button', { name: '[🔒]Data Set 2222' }).click();
+  await page.getByRole('button', { name: '[x]Data Set 2222' }).click();
   await page.getByRole('img', { name: 'Filtering' }).click();
 
   // Must be non-empty filtering JSON. Tab title must be the same.

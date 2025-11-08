@@ -13,7 +13,7 @@ import {
 } from 'geojson';
 import { scaleSqrt } from 'd3-scale';
 import { debounce } from 'dettle';
-import { debugLog, line, svgNode } from './wired-lib';
+import { debugLog, line, Point, svgNode } from './wired-lib';
 import { DataPoint, WiredBaseGraph } from './wired-base-graph';
 
 type FeatureClassName = 'coastline' |
@@ -118,6 +118,15 @@ export class WiredGlobe extends WiredBaseGraph {
         this.r = Math.min(rect.width, rect.height) / 2;
       }
     }
+  }
+
+  protected shouldUpdateWiredShapes(size: Point, changed: PropertyValues | undefined): boolean | undefined {
+    return super.shouldUpdateWiredShapes(size, changed) || changed?.has('r') ||
+        changed?.has('eye') || changed?.has('featureclasses');
+  }
+
+  protected renderWiredShapes() {
+    super.renderWiredShapes();
 
     // draw coordinates net
     let t = Date.now();
@@ -136,30 +145,16 @@ export class WiredGlobe extends WiredBaseGraph {
     }
     debugLog(`net: ${Date.now() - t}`);
 
-    // if eye or r changed, we need re-draw features and to re-pose data
-    if (changedProperties?.has('r') || changedProperties?.has('eye')
-        || changedProperties?.has('featureclasses')) {
-      // 0. if featureclasses has changed, create g groups for the classes.
-      // features are placed in the same order that featureclasses are listed
-      if (changedProperties?.has('featureclasses')) {
-        // remove existing groups, beside of "net"
-        for (const className of Object.keys(this.svgByClass))
-          if (className !== 'net') this.removeSvgClass(className as SvgClassName);
+    // 0. create g groups for the classes.
+    // features are placed in the same order that featureclasses are listed
+    for (const className of this.featureclasses)
+      this.createSvgClass(className);
 
-        //add new groups
-        for (const className of this.featureclasses)
-          this.createSvgClass(className);
-      }
+    // 1. re-draw the features using current features
+    for (const className of this.featureclasses) this.drawByClass(className);
 
-      // 1. re-draw the features using current features
-      for (const className of this.featureclasses) this.drawByClass(className);
-
-      // 2. re-request features form the server with new coordinates or scale
-      this.fetchFeatures();
-
-      // 3. re-pose data points
-      this.poseData();
-    }
+    // 2. re-request features form the server with new coordinates or scale
+    this.fetchFeatures();
   }
 
   get datapoints() {
@@ -578,6 +573,8 @@ export class WiredGlobe extends WiredBaseGraph {
   }
 
   protected onWheelOnGraph(event: WheelEvent) {
+    event.preventDefault();
+
     const R_MIN = 10;
     const R_MAX = 10000;
 

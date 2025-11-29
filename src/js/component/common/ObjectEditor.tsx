@@ -31,7 +31,7 @@ export interface ObjectEditorInterface {
 /**
  * General-purpose editor of (almost) any object.
  */
-const ObjectEditor = <T extends any>(params: ObjectEditorParams<T>, ref: React.ForwardedRef<ObjectEditorInterface>) => {
+const ObjectEditor = React.forwardRef(<T extends any>(params: ObjectEditorParams<T>, ref: React.ForwardedRef<ObjectEditorInterface>) => {
   const _JsonEditor = lazy(() => import('./Editor')),
       jsonEditorRef = useRef<EditorInterface | null>(null);
 
@@ -132,6 +132,6 @@ const ObjectEditor = <T extends any>(params: ObjectEditorParams<T>, ref: React.F
       </Block>
     </div>
   </Suspense>;
-};
+});
 
-export default React.forwardRef(ObjectEditor);
+export default ObjectEditor;

@@ -1,5 +1,5 @@
 import React, { Dispatch } from 'react';
-import Toolbox from '../common/Toolbox';
+import Toolbox, { ToolboxButton } from '../common/Toolbox';
 import Icon from '../../icon/Icon';
 import {
   DsDialogAction,
@@ -20,7 +20,7 @@ const VizToolbox = (props: VizToolboxProps) => {
 
   return <>
     <Toolbox>
-      <Toolbox.Button
+      <ToolboxButton
           src={Icon.fileJson}
           alt="Visualization"
           title="Edit visualization query"

@@ -1,5 +1,5 @@
 import React, { Dispatch } from 'react';
-import Toolbox from '../common/Toolbox';
+import Toolbox, { ToolboxButton } from '../common/Toolbox';
 import Icon from '../../icon/Icon';
 import {
   DsDialogAction,
@@ -21,7 +21,7 @@ const DsToolbox = (props: DsToolboxProps) => {
 
   return <>
     <Toolbox>
-      <Toolbox.Button
+      <ToolboxButton
           src={Icon.fileJson}
           alt="Filtering"
           title="Edit filter query"

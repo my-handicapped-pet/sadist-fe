@@ -1,10 +1,10 @@
-import ReactDom from "react-dom";
+import { createRoot } from 'react-dom/client';
 
-export function renderPage(element: JSX.Element) {
+export function renderPage(element: React.JSX.Element) {
   const wrapper = document.getElementById('container');
-  return wrapper ? ReactDom.render(element, wrapper) : false
-}
-
-export function appendElement(element: JSX.Element, container: ReactDom.Container | null) {
-  return ReactDom.render(element, container);
+  if (!wrapper) {
+    throw new Error('React application fail due to missing <div id="container">');
+  }
+  const root = createRoot(wrapper);
+  root.render(element);
 }

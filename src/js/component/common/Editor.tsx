@@ -6,7 +6,7 @@ import React, {
 } from 'react';
 import monaco, { editor, languages, MarkerSeverity, Uri } from 'monaco-editor';
 import EditorOption = editor.EditorOption;
-import { useResizeDetector } from 'react-resize-detector';
+import { ResizePayload, useResizeDetector } from 'react-resize-detector';
 import { __as } from '../../helper/type-helper';
 
 export type TypescriptLib = { uri: string; source: string; };
@@ -123,7 +123,10 @@ const models: { [uri: string]: editor.ITextModel } = {};
  * Generally it's just a wrapper, but keep it in case of changing underlying
  * component in the future.
  */
-const __Editor = function (props: EditorProps, ref: React.ForwardedRef<EditorInterface>) {
+const Editor = React.forwardRef(function (
+    { id, language = 'javascript', libs, readonly = false, schema, text, ...other }: EditorProps,
+    ref: React.ForwardedRef<EditorInterface>
+) {
 
   // const containerRef = useRef<HTMLDivElement | null>(null);
   const { width, height, ref: containerRef } = useResizeDetector();
@@ -348,7 +351,6 @@ const __Editor = function (props: EditorProps, ref: React.ForwardedRef<EditorInt
   const cbMapRef = useRef<{
     [name: string]: { native: monaco.IDisposable, our: Function }[];
   }>({});
-  const { id, language, text, readonly, libs, schema, ...other } = props;
 
   useEffect(() => {
     if (containerRef.current) {
@@ -425,13 +427,6 @@ const __Editor = function (props: EditorProps, ref: React.ForwardedRef<EditorInt
       id={id}
       {...other}
   />;
-};
-
-const Editor = React.forwardRef(__Editor);
-
-Editor.defaultProps = {
-  language: 'javascript',
-  readonly: false,
-}
+});
 
 export default Editor;

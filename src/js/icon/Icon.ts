@@ -20,6 +20,7 @@ import lockOff from '~/img/lock-open.png';
 import back from '~/img/back.png';
 import forward from '~/img/forward.png';
 import refresh from '~/img/refresh.png';
+import github from '~/img/github-logo.png';
 
 export default {
   favicon,
@@ -44,4 +45,5 @@ export default {
   back,
   forward,
   refresh,
+  github,
 };

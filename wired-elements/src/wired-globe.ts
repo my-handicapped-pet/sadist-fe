@@ -130,7 +130,7 @@ export class WiredGlobe extends WiredBaseGraph {
 
     // draw coordinates net
     let t = Date.now();
-    this.removeByClass('net');
+    this.createSvgClass('net');
     for (let lat = 80; lat > -90; lat -= 20) {
       let step = 10;
       for (let lng = -180; lng < 180; lng += step) {

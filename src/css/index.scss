@@ -74,6 +74,41 @@ img.item {
   overflow: hidden;
 }
 
+.login-dialog .or-divider {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.login-dialog .uniselector {
+  margin-left: 4px;
+}
+
+.login-dialog form {
+  width: 600px;
+  max-width: 100%;
+}
+
+.login-dialog .fieldset {
+  column-width: 280px;
+  gap: 10px;
+}
+
+.login-dialog form wired-input {
+  display: block;
+  width: 100%;
+  min-width: 100px;
+  //margin: 10px;
+}
+
+.login-dialog form label {
+  font-size: small;
+}
+
+.login-dialog form wired-button {
+  float: right;
+  margin: 10px;
+}
+
 .new-dialog .dialog-content {
   min-height: 100px;
   width: 600px;

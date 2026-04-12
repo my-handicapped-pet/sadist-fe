@@ -1,6 +1,12 @@
-import { signIn, signOut } from "../helper/gapi-helper";
-import { UserAction, UserActionType } from '../reducer/userContextValue-reducer';
-import { User, UserContextData, UserContextValue, UserType } from "../model/user";
+import {
+  signIn as loginGoogle,
+  signOut as logoutGoogle
+} from "../helper/gapi-helper";
+import {
+  UserAction,
+  UserActionType
+} from '../reducer/userContextValue-reducer';
+import { User, UserContextData, UserContextValue } from "../model/user";
 import { API } from '../helper/api-helper';
 
 
@@ -18,137 +24,129 @@ import { API } from '../helper/api-helper';
  * @param dispatchUserContextValue {function(UserAction):void} returned by useReducer
  */
 export function useUserContextValue(userContextData: UserContextData, dispatchUserContextValue: (a: UserAction) => void): UserContextValue {
-  // 1. generate methods for user login, logout etc.
-  const startWhoami = () => dispatchUserContextValue({ type: UserActionType.WHOAMI_START });
-  const successWhoami = (user: User) => {
-    dispatchUserContextValue({ type: UserActionType.WHOAMI_SUCCCESS, user });
-    return user;
-  };
-  const failWhoami = (e: any) => {
-    dispatchUserContextValue({ type: UserActionType.WHOAMI_FAIL });
-    throw e;
-  };
-  const startLogin = () => dispatchUserContextValue({ type: UserActionType.LOGIN_START });
-  const successLogin = (user: User) => {
-    dispatchUserContextValue({ type: UserActionType.LOGIN_SUCCESS, user });
-    return user;
-  };
-  const failLogin = (e: any) => {
-    dispatchUserContextValue({ type: UserActionType.LOGIN_FAIL });
-    throw e;
-  };
-  const startLogout = () => dispatchUserContextValue({ type: UserActionType.LOGOUT_START });
-  const successLogout = (user: User) => {
-    dispatchUserContextValue({ type: UserActionType.LOGOUT_SUCCESS, user });
-    return user;
-  };
-  const failLogout = (e: any) => {
-    dispatchUserContextValue({ type: UserActionType.LOGOUT_FAIL });
-    throw e;
-  }
-  const loginInternal = useLoginInternal();
-  const logoutInternal = useLogoutInternal();
-  const whoami = useWhoami();
-  const loginGoogle = useLogin({ type: "google" });
-  const logout = useLogout({ type: userContextData.user.type });
-  const openLoginDialog = () => dispatchUserContextValue({ type: UserActionType.LOGIN_DIALOG_OPEN });
-  const closeLoginDialog = () => dispatchUserContextValue({ type: UserActionType.LOGIN_DIALOG_CANCEL });
-
-  // 2. combine these methods with state management methods
-  // and put them together with user context value
   return {
     ...userContextData,
-    whoami: function () {
-      startWhoami();
-      return whoami()
-        .then(successWhoami)
-        .catch(failWhoami);
+    async whoami(): Promise<User> {
+      dispatchUserContextValue({ type: UserActionType.WHOAMI_START });
+      try {
+        const user = await whoami();
+        dispatchUserContextValue({ type: UserActionType.WHOAMI_SUCCCESS, user });
+        return user;
+      } catch (e) {
+        dispatchUserContextValue({ type: UserActionType.WHOAMI_FAIL });
+        throw e;
+      }
     },
-    loginGoogle: function () {
-      startLogin();
-      return loginGoogle()
-        .then(loginInternal)
-        .then(successLogin)
-        .catch(failLogin);
+
+    async loginGoogle(): Promise<User> {
+      dispatchUserContextValue({ type: UserActionType.LOGIN_START });
+      try {
+        const user = await loginGoogle();
+        const user_1 = await loginInternal(user);
+        dispatchUserContextValue({ type: UserActionType.LOGIN_SUCCESS, user: user_1 });
+        return user_1;
+      } catch (e) {
+        dispatchUserContextValue({ type: UserActionType.LOGIN_FAIL });
+        throw e;
+      }
     },
-    logout: function () {
-      startLogout();
-      return logout()
-        .then(logoutInternal)
-        .then(successLogout)
-        .catch(failLogout);
+
+    async loginLocal(login: string, password: string): Promise<User> {
+      dispatchUserContextValue({ type: UserActionType.LOGIN_START });
+      try {
+        const user = await loginInternal({
+          type: 'local',
+          extra: { login, password }
+        });
+        dispatchUserContextValue({ type: UserActionType.LOGIN_SUCCESS, user });
+        return user;
+      } catch (e) {
+        dispatchUserContextValue({ type: UserActionType.LOGIN_FAIL });
+        throw e;
+      }
     },
-    openLoginDialog,
-    closeLoginDialog,
+
+    async logout(): Promise<User> {
+      dispatchUserContextValue({ type: UserActionType.LOGOUT_START });
+      try {
+        if (userContextData.user.type === 'google') {
+          await logoutGoogle();
+        }
+        const user = await logout();
+        dispatchUserContextValue({ type: UserActionType.LOGOUT_SUCCESS, user });
+        return user;
+      } catch (e) {
+        dispatchUserContextValue({ type: UserActionType.LOGOUT_FAIL });
+        throw e;
+      }
+    },
+
+    async signup(user: User & { type: "local" }): Promise<User> {
+      dispatchUserContextValue({ type: UserActionType.SIGNUP_START });
+      try {
+        const user_1 = await signup(user);
+        dispatchUserContextValue({ type: UserActionType.SIGNUP_SUCCESS });
+        return user_1;
+      } catch (e) {
+        dispatchUserContextValue({ type: UserActionType.SIGNUP_FAIL });
+        throw e;
+      }
+    },
+
+    async forgotPassword(login: string): Promise<void> {
+      dispatchUserContextValue({ type: UserActionType.FORGOT_PASSWORD_START });
+      try {
+        await forgotPassword(login);
+        dispatchUserContextValue({ type: UserActionType.FORGOT_PASSWORD_SUCCESS });
+      } catch (e) {
+        dispatchUserContextValue({ type: UserActionType.FORGOT_PASSWORD_FAIL });
+        throw e;
+      }
+    },
+
+    openLoginDialog() {
+      dispatchUserContextValue({ type: UserActionType.LOGIN_DIALOG_OPEN });
+    },
+
+    closeLoginDialog() {
+      dispatchUserContextValue({ type: UserActionType.LOGIN_DIALOG_CANCEL });
+    },
   }
 }
 
 /**
- * Return a function to retrieve current user from our application
- * @return {function(): Promise<*>}
+ * retrieve current user from our application
  */
-const useWhoami = () => {
-  return function (): Promise<User> {
-    return API.get('/user/whoami').then(data => data.user);
-  };
+function whoami(): Promise<User> {
+  return API.get('/user/whoami').then(data => data.user);
 }
 
 /**
- * Return a function to login to our own application
- * @return {function(*): Promise<*>}
+ * log in to our own application
  */
-const useLoginInternal = () => {
-  return function (user: User): Promise<User> {
-    return API.post('/user/login', { user }).then(data => data.user);
-  };
+function loginInternal(user: User): Promise<User> {
+  return API.post('/user/login', { user }).then(data => data.user);
 }
 
 /**
- * Return a function to logout from our own application
- * @return {function(): Promise<>}
+ * log out from our own application
  */
-const useLogoutInternal = () => {
-  return function (): Promise<User> {
-    return API.post('/user/logout').then(data => data.user);
-  };
+function logout(): Promise<User> {
+  return API.post('/user/logout').then(data => data.user);
 }
 
 /**
- * Return a login function for a user of given type
- * @param type type of user
- * @returns {function(*): Promise<*>}
+ * sign up to our application
+ * @param user user fields to signup
  */
-const useLogin = ({ type }: UserTypeType) => {
-  return useHook({ type }).signIn;
-};
+function signup(user: User & { type: "local" }): Promise<User> {
+  return API.post('/user/signup', { user }).then(data => data.user);
+}
 
 /**
- * Return a logout function for a user of given type
- * @param type type of a user
- * @returns {function(): Promise<>}
+ * trigger "forgot password" logic (sending an email with the reset link)
+ * @param login login or email
  */
-const useLogout = ({ type }: UserTypeType) => {
-  return useHook({ type }).signOut;
+function forgotPassword(login: string): Promise<void> {
+  return API.post('/user/forgot-password', { login });
 }
-
-const useHook = ({ type }: UserTypeType) => {
-  const config: UserHookMap = {
-    "google": useGoogleHook(),
-    "default": useDefaultHook({ type }),
-  };
-  return config[type] || config["default"];
-}
-
-const useDefaultHook = ({ type }: UserTypeType): UserHookType => ({
-  signIn: () => new Promise((_resolve, reject) => reject(`${type} cannot sign in`)),
-  signOut: () => new Promise((_resolve, reject) => reject(`${type} cannot sign in`)),
-});
-
-const useGoogleHook = (): UserHookType => ({
-  signIn,
-  signOut,
-});
-
-type UserTypeType = { type: UserType };
-type UserHookType = { signIn: () => Promise<User>, signOut: () => Promise<void> };
-type UserHookMap = { [k: string]: UserHookType };

@@ -1,10 +1,16 @@
-import React, { KeyboardEvent, useContext, useEffect, useRef } from 'react';
-import { useState } from 'react';
+import React, {
+  KeyboardEvent,
+  useContext,
+  useEffect,
+  useRef,
+  useState
+} from 'react';
 import Uniselector from '../common/Uniselector';
 import UserContext from '../../context/UserContext';
 import { WiredInput } from '/wired-elements/lib/wired-input';
 import GoogleLoginButton from './GoogleLoginButton';
 import Or from '../common/Or';
+import AvatarEditor, { AvatarEditorRef } from './AvatarEditor';
 import Icon from '../../icon/Icon';
 
 interface LocalLoginFormState {
@@ -12,6 +18,10 @@ interface LocalLoginFormState {
    * display login, sign up, or forgot password form
    */
   form?: 'login' | 'signup' | 'forgot';
+  /**
+   * Avatar's data URL (before sending to the server)
+   */
+  avatarUrl?: string;
   /**
    * display an inline error
    */
@@ -47,6 +57,7 @@ export default function UserLoginForm() {
   const signupEmailRef = useRef<WiredInput | null>(null);
   const signupDisplayNameRef = useRef<WiredInput | null>(null);
   const signupAvatarRef = useRef<WiredInput | null>(null);
+  const signupAvatarEditorRef = useRef<AvatarEditorRef | null>(null);
 
   // refs to the fields in forgot password form
   const forgotPasswordRef = useRef<WiredInput | null>(null);
@@ -113,17 +124,32 @@ export default function UserLoginForm() {
     setState({ ...state, err, message: undefined });
 
     if (!err) {
-      // TODO 1st step upload avatar and get URL
-      signup({
-        type: 'local',
-        name,
-        avatar,
-        extra: {
-          email,
-          login,
-          password,
-        }
-      })
+      signupAvatarEditorRef.current?.getImageAsPng()
+          .then((blob) => {
+            if (!blob) {
+              return undefined;
+            }
+            const formData = new FormData();
+            formData.set('avatar', blob);
+            return fetch('/image/avatar', {
+              method: 'POST',
+              body: formData,
+            })
+                .then((response) => response.json())
+                .then(({ path }) => path);
+          })
+          .then((avatar) => {
+            return signup({
+              type: 'local',
+              name,
+              avatar,
+              extra: {
+                email,
+                login,
+                password,
+              }
+            })
+          })
           .then(() => {
             setState({ ...state, err: undefined, message: SIGNUP_MESSAGE,
               form: 'login' });
@@ -144,6 +170,17 @@ export default function UserLoginForm() {
         handler();
       }
     }
+  }
+
+  function readAvatarUrl(e: CustomEvent): Promise<string> {
+    const file = e.detail.sourceEvent.srcElement.files[0];
+    return new Promise((resolve) => {
+      var reader = new FileReader();
+      reader.onloadend = function() {
+        resolve(reader.result as string);
+      }
+      reader.readAsDataURL(file);
+    });
   }
 
   function renderLogin() {
@@ -182,6 +219,17 @@ export default function UserLoginForm() {
                            }
                        }
         }}/>
+        <label htmlFor="signup_login">Your login</label>
+        <wired-input key="login" ref={signupLoginRef} id="signup_login"
+                     placeholder="Login" oninput={() => {
+          setState({ ...state, loginChanged: true });
+        }}/>
+        <label htmlFor="signup_password">Your password</label>
+        <wired-input key="enter-password" ref={signupPasswordRef} id="signup_password"
+                     type="password" placeholder="Password"/>
+        <label htmlFor="signup_confirm_password">Confirm your password</label>
+        <wired-input key="cofirm-password" ref={signupConfirmPasswordRef} id="signup_confirm_password"
+                     type="password" placeholder="Confirm password"/>
         <label htmlFor="signup_name">Your name (to display on the site)</label>
         <wired-input key="display-name" ref={signupDisplayNameRef} id="signup_name"
                      placeholder="Name" oninput={() => {
@@ -190,18 +238,12 @@ export default function UserLoginForm() {
         <label htmlFor="signup_avatar">Your user picture</label>
         <wired-input key="avatar" ref={signupAvatarRef} id="signup_avatar"
                      placeholder="Avatar"
-                     type="file"/>
-        <label htmlFor="signup_login">Your login</label>
-        <wired-input key="login" ref={signupLoginRef} id="signup_login"
-                     placeholder="Login" oninput={() => {
-                       setState({ ...state, loginChanged: true });
+                     type="file" onchange={(event) => {
+                       readAvatarUrl(event).then((avatarUrl) => {
+                         setState({ ...state, avatarUrl });
+                       });
         }}/>
-        <label htmlFor="signup_password">Your password</label>
-        <wired-input key="enter-password" ref={signupPasswordRef} id="signup_password"
-                     type="password" placeholder="Password"/>
-        <label htmlFor="signup_confirm_password">Confirm your password</label>
-        <wired-input key="cofirm-password" ref={signupConfirmPasswordRef} id="signup_confirm_password"
-                     type="password" placeholder="Confirm password"/>
+        <AvatarEditor ref={signupAvatarEditorRef} src={state.avatarUrl}/>
       </div>
       {renderMessages()}
       <wired-button key="signup" disabled={isSignup} onClick={doSignUp}>

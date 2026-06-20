@@ -153,6 +153,12 @@ module.exports = {
           success: true,
         });
       });
+      devServer.app.post('/image/avatar', function (req, res) {
+        res.send({
+          success: true,
+          path: '/path/to/avatar',
+        });
+      });
       devServer.app.get('/ls', function (req, res) {
         res.send({
           list: [

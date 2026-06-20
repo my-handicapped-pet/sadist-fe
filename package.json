@@ -51,6 +51,8 @@
   },
   "dependencies": {
     "@gizt/selector": "^1.0.11",
+    "@imerljak/react-cropper-2": "^0.2.1",
+    "cropperjs": "^2.1.1",
     "deep-equal": "^2.0.2",
     "gapi-script": "^1.2.0",
     "hoist-non-react-statics": "^3.3.2",

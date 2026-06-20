@@ -46,29 +46,35 @@ const UserDropdown = () => {
 
   return <>
     <UserLoginDialog
-      open={isVal(isLoginDialogOpen)}
-      onCancel={closeLoginDialog}
+        open={isVal(isLoginDialogOpen)}
+        onCancel={closeLoginDialog}
     />
     <Dropdown
-      ref={dropdownRef}
-      className="user-dropdown"
-      toggle={
-        <div className="user-dropdown-icon">
-          <Loader loading={loading || isLogin || isLogout}/>
-          <img
-            src={user.avatar || anon}
-            alt={user.name || 'anon'}
-          />
-        </div>
-      }
-      content={
-        <wired-listbox onselected={onMenu}>
-          {user.type === 'anon' ?
-            <wired-item value="login">Login</wired-item> :
-            <wired-item value="logout">Logout</wired-item>
-          }
-        </wired-listbox>
-      }
+        ref={dropdownRef}
+        className="user-dropdown"
+        toggle={
+          <div className="user-dropdown-icon">
+            <Loader loading={loading || isLogin || isLogout}/>
+            <img
+                src={user.avatar || anon}
+                alt={user.name || 'anon'}
+            />
+          </div>
+        }
+        content={
+          <div className="user-menu">
+            <wired-listbox onselected={onMenu}>
+              {user.type === 'anon' ?
+                  <>
+                    <wired-item value="login">Login</wired-item>
+                  </> :
+                  <>
+                    <wired-item value="logout">Logout</wired-item>
+                  </>
+              }
+            </wired-listbox>
+          </div>
+        }
     />
   </>
 }

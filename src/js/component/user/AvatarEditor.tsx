@@ -22,7 +22,7 @@ const AvatarEditor: React.ForwardRefRenderFunction<AvatarEditorRef> = (props: Av
           height: 100,
         }).then((canvas) => new Promise<Blob | null>((resolve) => {
           canvas?.toBlob(resolve, 'image/png', 1);
-        })) || Promise.resolve(null);
+        })).catch(() => null) || Promise.resolve(null);
       }
     };
   });

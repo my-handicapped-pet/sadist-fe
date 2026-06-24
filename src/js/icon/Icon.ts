@@ -21,6 +21,7 @@ import back from '~/img/back.png';
 import forward from '~/img/forward.png';
 import refresh from '~/img/refresh.png';
 import github from '~/img/github-logo.png';
+import loading from '~/img/loading.gif';
 
 export default {
   favicon,
@@ -46,4 +47,5 @@ export default {
   forward,
   refresh,
   github,
+  loading,
 };

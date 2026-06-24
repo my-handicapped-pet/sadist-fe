@@ -6,6 +6,8 @@ export const defaultUserContextData: UserContextData = {
   loaded: false,
   isLogin: false,
   isLogout: false,
+  isSignup: false,
+  isForgotPassword: false,
   isLoginDialogOpen: false,
 }
 
@@ -33,6 +35,16 @@ export function reduceUserContextData(data: UserContextData, action: UserAction)
       return { ...data, user: action.user!, isLogout: false };
     case UserActionType.LOGOUT_FAIL:
       return { ...data, isLogout: false };
+    case UserActionType.SIGNUP_START:
+      return { ...data, isSignup: true };
+    case UserActionType.SIGNUP_SUCCESS:
+    case UserActionType.SIGNUP_FAIL:
+      return { ...data, isSignup: false };
+    case UserActionType.FORGOT_PASSWORD_START:
+      return { ...data, isForgotPassword: true };
+    case UserActionType.FORGOT_PASSWORD_SUCCESS:
+    case UserActionType.FORGOT_PASSWORD_FAIL:
+      return { ...data, isForgotPassword: false };
   }
   console.log(`The action ${action.type} cannot be dispatched, stay with the same state`);
   return data;
@@ -50,6 +62,12 @@ export enum UserActionType {
   LOGOUT_START,
   LOGOUT_SUCCESS,
   LOGOUT_FAIL,
+  SIGNUP_START,
+  SIGNUP_SUCCESS,
+  SIGNUP_FAIL,
+  FORGOT_PASSWORD_START,
+  FORGOT_PASSWORD_SUCCESS,
+  FORGOT_PASSWORD_FAIL,
 }
 
 export interface UserAction {

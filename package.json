@@ -6,7 +6,7 @@
   "scripts": {
     "test": "playwright test",
     "build": "cd wired-elements && npm i && npm run build && cd .. && webpack --mode production ",
-    "build-n-copy": "cd wired-elements && npm i && npm run build && cd .. && webpack --mode production && cp -r dist/*.js dist/*.png dist/*.ico dist/*.ttf ../sadist-be/app/static ",
+    "build-n-copy": "cd wired-elements && npm i && npm run build && cd .. && webpack --mode production && cp -r dist/*.js dist/*.png dist/*.gif dist/*.ico dist/*.ttf ../sadist-be/app/static ",
     "start": "webpack serve --mode development --open",
     "start:no-open": "webpack serve --mode development"
   },
@@ -51,6 +51,8 @@
   },
   "dependencies": {
     "@gizt/selector": "^1.0.11",
+    "@imerljak/react-cropper-2": "^0.2.1",
+    "cropperjs": "^2.1.1",
     "deep-equal": "^2.0.2",
     "gapi-script": "^1.2.0",
     "hoist-non-react-statics": "^3.3.2",

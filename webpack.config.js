@@ -110,7 +110,7 @@ module.exports = {
             avatar: 'https://lh3.googleusercontent.com/a/AATXAJwje0PGgbSrqZp0L1U3HtI7AZwwabLNw7-xhz8f=s96-c'
           },
           success: true
-        })
+        });
       });
       devServer.app.post('/user/login', function (req, res) {
         res.send({
@@ -120,7 +120,7 @@ module.exports = {
             avatar: 'https://lh3.googleusercontent.com/a/AATXAJwje0PGgbSrqZp0L1U3HtI7AZwwabLNw7-xhz8f=s96-c'
           },
           success: true
-        })
+        });
       });
       devServer.app.post('/user/logout', function (req, res) {
         res.send({
@@ -128,7 +128,36 @@ module.exports = {
             type: 'anon'
           },
           success: true
-        })
+        });
+      });
+      devServer.app.post('/user/signup', async function (req, res) {
+        // emulate lag
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const rawBody = await new Promise((resolve) => {
+          let chunks = [];
+          req.on("data", (d) => {
+            chunks.push(d);
+          });
+          req.on('end', () => {
+            resolve(Buffer.concat(chunks).toString('utf8'));
+          });
+        });
+        const payload = JSON.parse(rawBody);
+        res.send({
+          user: payload.user,
+          success: true,
+        });
+      });
+      devServer.app.post('/user/forgot-password', function (req, res) {
+        res.send({
+          success: true,
+        });
+      });
+      devServer.app.post('/image/avatar', function (req, res) {
+        res.send({
+          success: true,
+          path: '/path/to/avatar',
+        });
       });
       devServer.app.get('/ls', function (req, res) {
         res.send({
@@ -217,7 +246,7 @@ module.exports = {
             }
           ],
           success: true
-        })
+        });
       });
       devServer.app.get('/ds/1111', function (req, res) {
         res.send({
@@ -236,7 +265,7 @@ module.exports = {
             }
           ],
           success: true
-        })
+        });
       });
       devServer.app.get('/ds/2222', function (req, res) {
         res.send({
@@ -263,8 +292,7 @@ module.exports = {
             }
           ],
           success: true
-        })
-
+        });
       });
       devServer.app.get('/ds/3333', function (req, res) {
         res.send({
@@ -283,7 +311,7 @@ module.exports = {
             }
           ],
           success: true
-        })
+        });
       });
       devServer.app.get('/ds/2222/visualize', function (req, res) {
         res.send({
@@ -314,7 +342,7 @@ module.exports = {
             }
           ],
           success: true
-        })
+        });
       });
       devServer.app.get('/ds/2222/filter', function (req, res) {
         res.send({
@@ -331,17 +359,7 @@ module.exports = {
             }
           ],
           success: true
-        })
-      });
-      devServer.app.get('/ds/2222/label-values', function (req, res) {
-        res.send({
-          list: [
-            { id: 1, name: 'Moscow', },
-            { id: 2, name: 'Paris', },
-            { id: 3, name: 'New York', },
-          ],
-          success: true
-        })
+        });
       });
       devServer.app.put('/ds', function (req, res) {
         res.send({
@@ -355,21 +373,21 @@ module.exports = {
             }
           },
           success: true
-        })
-      })
+        });
+      });
       devServer.app.get('/dl/session/s1234', function (req, res) {
         res.send({
           text: 'slowo za slowo',
           sequence: [{token: 'slowo', label: 'word'}, {token: ' ', label: 'whitespace'},
             {token: 'za', label: 'word'}, {token: ' ', label: 'whitespace'}, {token: 'slowo', label: 'word'}],
           success: true
-        })
+        });
       });
       devServer.app.post('/dl/session/s1234', function (req, res) {
         res.send({
           text: 'hue´m po stolu',
           success: true
-        })
+        });
       });
 
 
@@ -377,8 +395,8 @@ module.exports = {
       //   res.send({
       //     status: 'finished',
       //     success: true
-      //   })
-      // })
+      //   });
+      // });
       // devServer.app.post('/dl/session/s1234/merge', function (req, res) {
       //   res.send({
       //     status: 'merging',
@@ -412,19 +430,19 @@ module.exports = {
       //       }
       //     ],
       //     success: true
-      //   })
-      // })
+      //   });
+      // });
       // app.post('/dl/session/s1234/resolve-conflicts', function (req, res) {
       //   res.send({
       //     status: 'merged',
       //     success: true
-      //   })
-      // })
+      //   });
+      // });
 
       devServer.app.put('/wc/template', function (req, res) {
         res.send({
           success: true
-        })
+        });
       });
       devServer.app.get('/wc/template', function (req, res) {
         res.send(`[{"name":"simple single-page scrapper","text":"function scratch(page) {\\n  return page.goto(\u003C%url\\"http:\u002F\u002Flj.rossia.org\u002Fusers\u002Fdodjer\u002F18590.html\\"%\u003E)\\n      .then(async () =\u003E {\\n        const r = [[\u003C%title%\u003E]];\\n        await page.$$(\u003C%row%\u003E)\\n            .forEach((row, i) =\u003E {\u003C%fields%\u003E\\n              r.push([\u003C%values%\u003E]);\\n            });\\n        return r;\\n      });\\n}","$Use as row":function $UseAsRow(s) {

@@ -3,11 +3,14 @@ import React, {
   Suspense,
   useEffect,
   useImperativeHandle,
-  useRef
+  useRef,
+  useState
 } from 'react';
 import equal from 'deep-equal';
 import type { EditorInterface } from './Editor';
 import Block from './Block';
+
+const JsonEditor = lazy(() => import('./Editor'));
 
 interface ObjectEditorParams<T> extends React.HTMLProps<HTMLDivElement> {
   obj?: T;
@@ -32,8 +35,8 @@ export interface ObjectEditorInterface {
  * General-purpose editor of (almost) any object.
  */
 const ObjectEditor = React.forwardRef(<T extends any>(params: ObjectEditorParams<T>, ref: React.ForwardedRef<ObjectEditorInterface>) => {
-  const _JsonEditor = lazy(() => import('./Editor')),
-      jsonEditorRef = useRef<EditorInterface | null>(null);
+  const jsonEditorRef = useRef<EditorInterface | null>(null);
+  const [jsonEditor, setJsonEditor] = useState<EditorInterface | null>(null);
 
   const {
     id,
@@ -103,23 +106,26 @@ const ObjectEditor = React.forwardRef(<T extends any>(params: ObjectEditorParams
   });
 
   useEffect(() => {
-    if (jsonEditorRef.current && onChanging) {
-      jsonEditorRef.current.on('change', onChanging);
+    if (jsonEditor && onChanging) {
+      jsonEditor.on('change', onChanging);
 
-      return () => jsonEditorRef.current?.off('change', onChanging);
+      return () => jsonEditor.off('change', onChanging);
     }
 
     return undefined;
-  }, [jsonEditorRef.current]);
+  }, [jsonEditor, onChanging]);
 
   // If object is undefined, let a user start from the empty slate,
   // otherwise it must be non-empty JSON serialization.
   let text = obj == undefined ? '' : JSON.stringify(obj, undefined, 2);
   return <Suspense fallback="loading...">
     <div className="block-container-vertical">
-      <_JsonEditor
+      <JsonEditor
           // @ts-ignore I honestly don't know why TS goes off here
-          ref={jsonEditorRef}
+          ref={(editor) => {
+            jsonEditorRef.current = editor;
+            setJsonEditor(editor);
+          }}
           id={id || 'orphan-editor'}
           language="json"
           text={text}

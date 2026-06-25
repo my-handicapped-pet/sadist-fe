@@ -353,38 +353,46 @@ const Editor = React.forwardRef(function (
   }>({});
 
   useEffect(() => {
-    if (containerRef.current) {
-      let model: editor.ITextModel | undefined = undefined;
-      if (language == 'json' && schema) {
-        // for JSON schema we need an URI to associate it with the model,
-        // let make it from ID.
-        const modelUri = monaco.Uri.parse(`editor://${id}.json`);
-        model = editor.createModel(text, language, modelUri);
+    if (!containerRef.current || editorRef.current) {
+      return;
+    }
 
-        // Attach schema to model
-        monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
-          validate: true,
-          schemas: [
-            ...( monaco.languages.json.jsonDefaults.diagnosticsOptions.schemas || [] ),
-            {
-              uri: `editor://${id}-schema.json`,
-              fileMatch: [modelUri.toString()],
-              schema: schema,
-            }
-          ]
-        });
-      }
+    let model: editor.ITextModel | undefined = undefined;
+    if (language == 'json' && schema) {
+      // for JSON schema we need an URI to associate it with the model,
+      // let make it from ID.
+      const modelUri = monaco.Uri.parse(`editor://${id}.json`);
+      model = editor.createModel(text, language, modelUri);
 
-      editorRef.current = editor.create(containerRef.current, {
-        automaticLayout: false,
-        minimap: { enabled: false },
-        tabSize: 2,
-        language: 'javascript',
-        value: text,
-        model,
-        readOnly: readonly,
+      // Attach schema to model
+      monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+        validate: true,
+        schemas: [
+          ...( monaco.languages.json.jsonDefaults.diagnosticsOptions.schemas || [] ),
+          {
+            uri: `editor://${id}-schema.json`,
+            fileMatch: [modelUri.toString()],
+            schema: schema,
+          }
+        ]
       });
     }
+
+    editorRef.current = editor.create(containerRef.current, {
+      automaticLayout: false,
+      minimap: { enabled: false },
+      tabSize: 2,
+      language: 'javascript',
+      value: text,
+      model,
+      readOnly: readonly,
+    });
+
+    return () => {
+      editorRef.current?.dispose();
+      editorRef.current = undefined;
+      model?.dispose();
+    };
   }, [containerRef.current]);
 
   useEffect(() => {

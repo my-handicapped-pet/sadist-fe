@@ -1,14 +1,8 @@
-import React, {
-  lazy,
-  Suspense,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState
-} from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import equal from 'deep-equal';
 import type { EditorInterface } from './Editor';
 import Block from './Block';
+import { useRefToForward } from '../../hook/ref-hooks';
 
 const JsonEditor = lazy(() => import('./Editor'));
 
@@ -25,9 +19,7 @@ interface ObjectEditorParams<T> extends React.HTMLProps<HTMLDivElement> {
   onUnchanged?(): void;
 }
 
-export interface ObjectEditorInterface {
-  underlying: EditorInterface | null;
-
+export interface ObjectEditorInterface extends EditorInterface {
   save(): boolean;
 }
 
@@ -35,7 +27,6 @@ export interface ObjectEditorInterface {
  * General-purpose editor of (almost) any object.
  */
 const ObjectEditor = React.forwardRef(<T extends any>(params: ObjectEditorParams<T>, ref: React.ForwardedRef<ObjectEditorInterface>) => {
-  const jsonEditorRef = useRef<EditorInterface | null>(null);
   const [jsonEditor, setJsonEditor] = useState<EditorInterface | null>(null);
 
   const {
@@ -69,20 +60,12 @@ const ObjectEditor = React.forwardRef(<T extends any>(params: ObjectEditorParams
     }
   }
 
-  useImperativeHandle(ref, () => ( {
-    underlying: jsonEditorRef.current,
-
+  const editorRef = useRefToForward<EditorInterface, ObjectEditorInterface>(ref, (editor) => ( {
     save(): boolean {
-      if (!jsonEditorRef.current) {
-        // If editor ref isn't yet set, we can fairly conclude
-        // that object isn't changed
-        onUnchanged?.();
-        return true;
-      }
       try {
-        const text = jsonEditorRef.current!.getText();
+        const text = editor.getText();
         // validate newObj over schema
-        jsonEditorRef.current!.validate();
+        editor.validate();
         const newObj = JSON.parse(text);
         if (equal(obj, newObj)) {
           onUnchanged?.();
@@ -94,7 +77,7 @@ const ObjectEditor = React.forwardRef(<T extends any>(params: ObjectEditorParams
         setError(e.message);
         // monaco-style positioning. Not very good to stick to it, but let it be...
         if (typeof e.startLineNumber == 'number' && typeof e.startColumn == 'number') {
-          jsonEditorRef.current!.setCursor([e.startLineNumber - 1, e.startColumn - 1]);
+          editor.setCursor([e.startLineNumber - 1, e.startColumn - 1]);
         }
         return false;
       }
@@ -123,7 +106,7 @@ const ObjectEditor = React.forwardRef(<T extends any>(params: ObjectEditorParams
       <JsonEditor
           // @ts-ignore I honestly don't know why TS goes off here
           ref={(editor) => {
-            jsonEditorRef.current = editor;
+            editorRef.current = editor;
             setJsonEditor(editor);
           }}
           id={id || 'orphan-editor'}

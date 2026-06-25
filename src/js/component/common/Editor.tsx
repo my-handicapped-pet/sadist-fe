@@ -130,7 +130,7 @@ const Editor = React.forwardRef(function (
 
   // const containerRef = useRef<HTMLDivElement | null>(null);
   const { width, height, ref: containerRef } = useResizeDetector();
-  const editorRef = useRef<editor.IStandaloneCodeEditor>();
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const selfRef = useRef<EditorInterface>(__as({
     getText(): string {
       if (!editorRef.current) {

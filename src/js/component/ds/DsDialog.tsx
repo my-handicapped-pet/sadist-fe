@@ -42,7 +42,7 @@ const __FilteringTab = ({
       setTimeout(() => {
         // Have to have focus after timeout, because
         // otherwise it doesn't work
-        let editor = editorRef.current?.underlying;
+        let editor = editorRef.current;
         if (editor) {
           // Fold "values" cos they are huge blocks...
           const lines = editor.findAll('"values":').map(pos => pos[0]);
@@ -98,7 +98,7 @@ const __VisualizationTab = (
   useEffect(() => {
     if (state.open && state.tab === 'visualization') {
       setTimeout(() => {
-        const editor = editorRef.current?.underlying;
+        const editor = editorRef.current;
         if (editor) {
           editor.focus();
         }
@@ -155,7 +155,7 @@ const DsDialog = (props: DsDialogProps) => {
 
   // {key -> reference}
   const tabRef: { [key in Tab]?: React.MutableRefObject<TabInterface> } =
-      Object.fromEntries(tabList.map(([key,]) => [key, useRef()]));
+      Object.fromEntries(tabList.map(([key,]) => [key, useRef(undefined)]));
 
   function close() {
     dispatchState({ type: DsDialogActionType.CLOSE });

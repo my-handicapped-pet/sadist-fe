@@ -1,5 +1,6 @@
-import React, { useImperativeHandle, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import Splitter from './Splitter';
+import { useRefToForward } from '../../hook/ref-hooks';
 
 interface BlockProps extends React.HTMLAttributes<HTMLDivElement> {
   style?: React.CSSProperties;
@@ -18,10 +19,8 @@ interface BlockProps extends React.HTMLAttributes<HTMLDivElement> {
   onRestored?(): any;
 }
 
-export interface BlockElement {
-  underlying: HTMLDivElement | null;
-
-  getActualSize(): number | undefined;
+export interface BlockElement extends HTMLDivElement {
+  getActualSize(): number;
 
   setActualSize(size: number): void;
 
@@ -66,15 +65,11 @@ const Block = React.forwardRef((
     size = `${actualSize}px`;
   }
 
-  const divRef = useRef<HTMLDivElement | null>(null);
-
-  useImperativeHandle(ref, () => ({
-    underlying: divRef.current,
-
+  const selfRef = useRefToForward<HTMLDivElement, BlockElement>(ref, (element) => ({
     getActualSize() {
       return isVertical ?
-          divRef.current?.getBoundingClientRect().width :
-          divRef.current?.getBoundingClientRect().height;
+          element.getBoundingClientRect().width :
+          element.getBoundingClientRect().height;
     },
 
     setActualSize(size: number) {
@@ -109,8 +104,8 @@ const Block = React.forwardRef((
         onSplit={!allowChangeSize || collapsed ? () => {
         } : (delta) => {
           let currentSize = ( isVertical ?
-              divRef.current?.getBoundingClientRect().width :
-              divRef.current?.getBoundingClientRect().height ) || 0;
+              selfRef.current?.getBoundingClientRect().width :
+              selfRef.current?.getBoundingClientRect().height ) || 0;
           let newSize = isReverse ? currentSize - delta : currentSize + delta;
           setActualSize(newSize);
           onSizeChanged?.(newSize);
@@ -126,7 +121,7 @@ const Block = React.forwardRef((
     {splitter && isReverse && renderSplitter()}
     <div
         {...rest}
-        ref={divRef}
+        ref={selfRef}
         className={className}
         style={{ ...style, flex }}
     >

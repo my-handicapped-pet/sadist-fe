@@ -1,4 +1,4 @@
-import React, { Dispatch, useEffect, useImperativeHandle, useRef } from 'react';
+import React, { Dispatch, useEffect, useRef } from 'react';
 import Dialog, { DialogButton } from '../common/Dialog';
 import ObjectEditor, { ObjectEditorInterface } from '../common/ObjectEditor';
 import Block from '../common/Block';
@@ -10,6 +10,7 @@ import {
   Tab
 } from '../../reducer/dsDialog-reducer';
 import { DsInfo } from '../../model/ds';
+import { useRefToForward } from '../../hook/ref-hooks';
 
 interface DsDialogProps {
   dsInfo: DsInfo;
@@ -18,24 +19,16 @@ interface DsDialogProps {
   dispatchState: Dispatch<DsDialogAction>;
 }
 
-interface TabInterface {
-  save(): boolean;
-}
+type TabInterface = ObjectEditorInterface;
 
-const __FilteringTab = ({
-                          dsInfo,
-                          dispatchDsInfo,
-                          state,
-                          dispatchState
-                        }: DsDialogProps, ref: React.ForwardedRef<TabInterface>) => {
+const FilteringTab = React.forwardRef(({
+                                         dsInfo,
+                                         dispatchDsInfo,
+                                         state,
+                                         dispatchState
+                                       }: DsDialogProps, ref: React.ForwardedRef<TabInterface>) => {
   const schema = require('/json_schema/filters.json');
-  const editorRef = useRef<ObjectEditorInterface | null>(null);
-
-  useImperativeHandle(ref, () => ( {
-    save(): boolean {
-      return editorRef.current!.save();
-    }
-  } ));
+  const editorRef = useRefToForward<ObjectEditorInterface>(ref);
 
   useEffect(() => {
     if (state.open && state.tab === 'filtering') {
@@ -74,11 +67,9 @@ const __FilteringTab = ({
         dispatchState({ type: DsDialogActionType.SAVED, tab: 'filtering' });
       }}
   />;
-}
+});
 
-const FilteringTab = React.forwardRef(__FilteringTab);
-
-const __VisualizationTab = (
+const VisualizationTab = React.forwardRef((
     {
       dsInfo,
       dispatchDsInfo,
@@ -87,13 +78,7 @@ const __VisualizationTab = (
     }: DsDialogProps, ref: React.ForwardedRef<TabInterface>
 ) => {
   const schema = require('/json_schema/viz.json');
-  const editorRef = useRef<ObjectEditorInterface | null>(null);
-
-  useImperativeHandle(ref, () => ( {
-    save(): boolean {
-      return editorRef.current!.save();
-    }
-  } ));
+  const editorRef = useRefToForward<ObjectEditorInterface>(ref);
 
   useEffect(() => {
     if (state.open && state.tab === 'visualization') {
@@ -129,9 +114,7 @@ const __VisualizationTab = (
         dispatchState({ type: DsDialogActionType.SAVED, tab: 'visualization' });
       }}
   />;
-}
-
-const VisualizationTab = React.forwardRef(__VisualizationTab);
+});
 
 /**
  * All dialog's tabs to manage DS will be rendered here.

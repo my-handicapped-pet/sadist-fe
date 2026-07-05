@@ -33,7 +33,7 @@ const SPAContent = () => {
   const [dsInfo, dispatchDsInfo] = React.useReducer(reduceDsInfo, defaultDsInfo);
   const [dsDialogState, dispatchDsDialogState] = React.useReducer(reduceDsDialogState, defaultDsDialogState);
 
-  const updateDsMetaTimeoutHandlerRef = React.useRef<NodeJS.Timeout>();
+  const updateDsMetaTimeoutHandlerRef = React.useRef<NodeJS.Timeout | null>(null);
 
   function propagateDsInfoToURL(dsInfo: DsInfo) {
     const params: { [p: string]: string; } = {};

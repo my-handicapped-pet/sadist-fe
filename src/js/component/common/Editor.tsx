@@ -6,7 +6,7 @@ import React, {
 } from 'react';
 import monaco, { editor, languages, MarkerSeverity, Uri } from 'monaco-editor';
 import EditorOption = editor.EditorOption;
-import { useResizeDetector } from 'react-resize-detector';
+import { ResizePayload, useResizeDetector } from 'react-resize-detector';
 import { __as } from '../../helper/type-helper';
 
 export type TypescriptLib = { uri: string; source: string; };
@@ -123,11 +123,14 @@ const models: { [uri: string]: editor.ITextModel } = {};
  * Generally it's just a wrapper, but keep it in case of changing underlying
  * component in the future.
  */
-const __Editor = function (props: EditorProps, ref: React.ForwardedRef<EditorInterface>) {
+const Editor = React.forwardRef(function (
+    { id, language = 'javascript', libs, readonly = false, schema, text, ...other }: EditorProps,
+    ref: React.ForwardedRef<EditorInterface>
+) {
 
   // const containerRef = useRef<HTMLDivElement | null>(null);
   const { width, height, ref: containerRef } = useResizeDetector();
-  const editorRef = useRef<editor.IStandaloneCodeEditor>();
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const selfRef = useRef<EditorInterface>(__as({
     getText(): string {
       if (!editorRef.current) {
@@ -348,41 +351,48 @@ const __Editor = function (props: EditorProps, ref: React.ForwardedRef<EditorInt
   const cbMapRef = useRef<{
     [name: string]: { native: monaco.IDisposable, our: Function }[];
   }>({});
-  const { id, language, text, readonly, libs, schema, ...other } = props;
 
   useEffect(() => {
-    if (containerRef.current) {
-      let model: editor.ITextModel | undefined = undefined;
-      if (language == 'json' && schema) {
-        // for JSON schema we need an URI to associate it with the model,
-        // let make it from ID.
-        const modelUri = monaco.Uri.parse(`editor://${id}.json`);
-        model = editor.createModel(text, language, modelUri);
+    if (!containerRef.current || editorRef.current) {
+      return;
+    }
 
-        // Attach schema to model
-        monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
-          validate: true,
-          schemas: [
-            ...( monaco.languages.json.jsonDefaults.diagnosticsOptions.schemas || [] ),
-            {
-              uri: `editor://${id}-schema.json`,
-              fileMatch: [modelUri.toString()],
-              schema: schema,
-            }
-          ]
-        });
-      }
+    let model: editor.ITextModel | undefined = undefined;
+    if (language == 'json' && schema) {
+      // for JSON schema we need an URI to associate it with the model,
+      // let make it from ID.
+      const modelUri = monaco.Uri.parse(`editor://${id}.json`);
+      model = editor.createModel(text, language, modelUri);
 
-      editorRef.current = editor.create(containerRef.current, {
-        automaticLayout: false,
-        minimap: { enabled: false },
-        tabSize: 2,
-        language: 'javascript',
-        value: text,
-        model,
-        readOnly: readonly,
+      // Attach schema to model
+      monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+        validate: true,
+        schemas: [
+          ...( monaco.languages.json.jsonDefaults.diagnosticsOptions.schemas || [] ),
+          {
+            uri: `editor://${id}-schema.json`,
+            fileMatch: [modelUri.toString()],
+            schema: schema,
+          }
+        ]
       });
     }
+
+    editorRef.current = editor.create(containerRef.current, {
+      automaticLayout: false,
+      minimap: { enabled: false },
+      tabSize: 2,
+      language: 'javascript',
+      value: text,
+      model,
+      readOnly: readonly,
+    });
+
+    return () => {
+      editorRef.current?.dispose();
+      editorRef.current = undefined;
+      model?.dispose();
+    };
   }, [containerRef.current]);
 
   useEffect(() => {
@@ -425,13 +435,6 @@ const __Editor = function (props: EditorProps, ref: React.ForwardedRef<EditorInt
       id={id}
       {...other}
   />;
-};
-
-const Editor = React.forwardRef(__Editor);
-
-Editor.defaultProps = {
-  language: 'javascript',
-  readonly: false,
-}
+});
 
 export default Editor;

@@ -1,5 +1,6 @@
-import React, { useImperativeHandle, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import Splitter from './Splitter';
+import { useRefToForward } from '../../hook/ref-hooks';
 
 interface BlockProps extends React.HTMLAttributes<HTMLDivElement> {
   style?: React.CSSProperties;
@@ -18,9 +19,7 @@ interface BlockProps extends React.HTMLAttributes<HTMLDivElement> {
   onRestored?(): any;
 }
 
-export interface BlockElement {
-  underlying: HTMLDivElement;
-
+export interface BlockElement extends HTMLDivElement {
   getActualSize(): number;
 
   setActualSize(size: number): void;
@@ -39,26 +38,24 @@ export interface BlockElement {
  * @param ref
  * @constructor
  */
-let __Block: React.ForwardRefRenderFunction<BlockElement, BlockProps> = (
-    props: BlockProps,
-    ref: React.Ref<BlockElement | null>
+const Block = React.forwardRef((
+    {
+      allowChangeSize = true,
+      allowCollapse = true,
+      children,
+      className = 'block',
+      collapsed: collapsedInit = false,
+      onCollapsed,
+      onRestored,
+      onSizeChanged,
+      size = 'auto',
+      splitter,
+      style = {},
+      ...rest
+    }: BlockProps,
+    ref: React.ForwardedRef<BlockElement>,
 ) => {
-  let {
-    style,
-    className,
-    size,
-    splitter,
-    allowChangeSize,
-    allowCollapse,
-    collapsed: collapsedInit,
-    children,
-    onSizeChanged,
-    onCollapsed,
-    onRestored,
-    ...rest
-  } = props;
 
-  const divRef = useRef<HTMLDivElement | null>(null);
   const [actualSize, setActualSize] = useState<number | undefined>();
   const [collapsed, setCollapsed] = useState(collapsedInit);
 
@@ -68,13 +65,11 @@ let __Block: React.ForwardRefRenderFunction<BlockElement, BlockProps> = (
     size = `${actualSize}px`;
   }
 
-  useImperativeHandle(ref, () => divRef.current ? {
-    underlying: divRef.current,
-
+  const selfRef = useRefToForward<HTMLDivElement, BlockElement>(ref, (element) => ({
     getActualSize() {
       return isVertical ?
-          divRef.current!.getBoundingClientRect().width :
-          divRef.current!.getBoundingClientRect().height;
+          element.getBoundingClientRect().width :
+          element.getBoundingClientRect().height;
     },
 
     setActualSize(size: number) {
@@ -88,7 +83,7 @@ let __Block: React.ForwardRefRenderFunction<BlockElement, BlockProps> = (
     restore() {
       setCollapsed(false);
     },
-  } : null);
+  }));
 
   let flex: string;
   if (size == 'auto') {
@@ -109,8 +104,8 @@ let __Block: React.ForwardRefRenderFunction<BlockElement, BlockProps> = (
         onSplit={!allowChangeSize || collapsed ? () => {
         } : (delta) => {
           let currentSize = ( isVertical ?
-              divRef.current?.getBoundingClientRect().width :
-              divRef.current?.getBoundingClientRect().height ) || 0;
+              selfRef.current?.getBoundingClientRect().width :
+              selfRef.current?.getBoundingClientRect().height ) || 0;
           let newSize = isReverse ? currentSize - delta : currentSize + delta;
           setActualSize(newSize);
           onSizeChanged?.(newSize);
@@ -126,7 +121,7 @@ let __Block: React.ForwardRefRenderFunction<BlockElement, BlockProps> = (
     {splitter && isReverse && renderSplitter()}
     <div
         {...rest}
-        ref={divRef}
+        ref={selfRef}
         className={className}
         style={{ ...style, flex }}
     >
@@ -134,17 +129,6 @@ let __Block: React.ForwardRefRenderFunction<BlockElement, BlockProps> = (
     </div>
     {splitter && !isReverse && renderSplitter()}
   </>;
-};
-
-const Block = React.forwardRef(__Block);
-
-Block.defaultProps = {
-  style: {},
-  className: 'block',
-  size: 'auto',
-  allowChangeSize: true,
-  allowCollapse: true,
-  collapsed: false,
-}
+});
 
 export default Block;

@@ -1,6 +1,10 @@
 import React, { useImperativeHandle, useRef, useState } from 'react';
-import { WiredInput } from '/wired-elements/src/wired-input';
-import Toolbox from '../common/Toolbox';
+import { WiredInput } from '/wired-elements/lib/wired-input';
+import Toolbox, {
+  ToolboxButton,
+  ToolboxDropdown,
+  ToolboxItem, ToolboxSwitch
+} from '../common/Toolbox';
 import Icon from '../../icon/Icon';
 import { WebCrawlerScriptTemplate } from '../../webcrawler-model/webcrawler';
 
@@ -35,7 +39,7 @@ export function ScriptToolbox(props: ScriptToolboxProps,
   const templateNameInputRef = useRef<WiredInput | null>(null);
 
   return <Toolbox>
-    <Toolbox.Item>
+    <ToolboxItem>
       <wired-combo
           selected={state.executor}
           onselected={(e) => {
@@ -45,9 +49,9 @@ export function ScriptToolbox(props: ScriptToolboxProps,
         <wired-item value="local">in Browser</wired-item>
         <wired-item value="proxy">on Proxy Server</wired-item>
       </wired-combo>
-    </Toolbox.Item>
-    <Toolbox.Button src={Icon.run} alt=">" title="Run" onClick={executeScript}/>
-    <Toolbox.Dropdown src={Icon.gear} alt="Settings" title="Settings">
+    </ToolboxItem>
+    <ToolboxButton src={Icon.run} alt=">" title="Run" onClick={executeScript}/>
+    <ToolboxDropdown src={Icon.gear} alt="Settings" title="Settings">
       <wired-checkbox
           checked={state.isSaveTemplate}
           onchange={(event) => {
@@ -71,8 +75,8 @@ export function ScriptToolbox(props: ScriptToolboxProps,
               template.name = templateNameInputRef.current!.value;
           }}
       ></wired-input>
-    </Toolbox.Dropdown>
-    <Toolbox.Switch
+    </ToolboxDropdown>
+    <ToolboxSwitch
         src={{ on: Icon.lockOn, off: Icon.lockOff }}
         alt={{ on: 'Edit script', off: 'Lock script' }}
         title={{ on: 'Unlock', off: 'Lock' }}

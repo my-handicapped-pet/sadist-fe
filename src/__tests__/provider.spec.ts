@@ -104,6 +104,8 @@ webCrawlerProviderTest('switch to full screen, switch back, close the dialog and
   await newDialog.getByRole('img', { name: 'Close' }).click();
   await page.openNewDialog();
 
+  // Wait to prevent race
+  await page.waitForTimeout(500);
   // Check that dialog's card has the same size as before
   const [card_w2, card_h2] = await page.locator('.new-dialog #container > div > div > wired-card')
       .evaluate((element) => [element.clientWidth, element.clientHeight]);

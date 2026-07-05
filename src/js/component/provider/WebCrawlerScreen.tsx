@@ -3,13 +3,14 @@ import { WiredSearchInput } from '/wired-elements/lib/wired-search-input';
 import Loader from '../common/Loader';
 import HTMLTree from '../common/HTMLTree';
 import Editor, {
-  ChangeEvent, EditorInterface,
+  ChangeEvent,
+  EditorInterface,
   Range,
   TypescriptLib
 } from '../common/Editor';
 import Uniselector from '../common/Uniselector';
 import Block, { BlockElement } from '../common/Block';
-import Toolbox from '../common/Toolbox';
+import Toolbox, { ToolboxButton } from '../common/Toolbox';
 import WebCrawlerScriptToolbox, {
   ScriptToolboxState
 } from './WebCrawlerScriptToolbox';
@@ -20,7 +21,8 @@ import ValidationError from './ValidationError';
 import { API } from '../../helper/api-helper';
 import {
   Webcrawler,
-  WebcrawlerRequest, WebcrawlerResponse
+  WebcrawlerRequest,
+  WebcrawlerResponse
 } from '../../webcrawler-client/webcrawler';
 import { scrollToVisible } from '../../helper/scroll-helper';
 
@@ -74,17 +76,17 @@ export default function WebCrawlerScreen(props: WebCrawlerProps) {
   const editorRef = useRef<EditorInterface | null>(null);
   const editorCommentRef = useRef<HTMLSpanElement | null>(null);
   const editorErrorRef = useRef<HTMLSpanElement | null>(null);
-  const transformerRef = useRef<( (...args: string[]) => void ) | undefined>();
-  const transformerArgsRef = useRef<string[] | undefined>();
-  const transformerArgNoRef = useRef<number | undefined>();
-  const transformerArgRangeRef = useRef<Range | undefined>();
-  const onChangeCallbackRef = useRef<( (event: ChangeEvent) => void ) | undefined>();
-  const onBlurCallbackRef = useRef<( (event: Event) => void ) | undefined>();
-  const isTemplateTrueRef = useRef<boolean>();
+  const transformerRef = useRef<( (...args: string[]) => void ) | undefined>(undefined);
+  const transformerArgsRef = useRef<string[] | undefined>(undefined);
+  const transformerArgNoRef = useRef<number | undefined>(undefined);
+  const transformerArgRangeRef = useRef<Range | undefined>(undefined);
+  const onChangeCallbackRef = useRef<( (event: ChangeEvent) => void ) | undefined>(undefined);
+  const onBlurCallbackRef = useRef<( (event: Event) => void ) | undefined>(undefined);
+  const isTemplateTrueRef = useRef<boolean | undefined>(undefined);
   const resultElementRef = useRef<BlockElement | null>(null);
-  const resultRef = useRef<ValueType[][] | undefined>();
-  const promiseRef = useRef<Promise<ValueType[][]> | undefined>();
-  const titleRef = useRef<string | undefined>();
+  const resultRef = useRef<ValueType[][] | undefined>(undefined);
+  const promiseRef = useRef<Promise<ValueType[][]> | undefined>(undefined);
+  const titleRef = useRef<string | undefined>(undefined);
   const scriptToolboxStateRef = useRef<ScriptToolboxState>(null);
 
   function highlightElement(element: Element) {
@@ -427,14 +429,14 @@ export default function WebCrawlerScreen(props: WebCrawlerProps) {
     }
     messageElement.append(document.createTextNode(message));
     messageElement.append(document.createElement('br'));
-    resultElementRef.current?.underlying.appendChild(messageElement);
-    scrollToVisible(messageElement, resultElementRef.current?.underlying);
+    resultElementRef.current?.appendChild(messageElement);
+    scrollToVisible(messageElement, resultElementRef.current);
   }
 
   function appendRequest(request: WebcrawlerRequest) {
     let messageElement: HTMLSpanElement | null | undefined;
     // check if already had a request with this URL
-    messageElement = resultElementRef.current?.underlying.querySelector(`[data-url="${request.url}"]`);
+    messageElement = resultElementRef.current?.querySelector(`[data-url="${request.url}"]`);
     if (messageElement) {
       const multiplierElement = messageElement.querySelector('.multiplier')!;
       const x = parseInt(multiplierElement.textContent?.substring(1) || "1") + 1;
@@ -455,31 +457,31 @@ export default function WebCrawlerScreen(props: WebCrawlerProps) {
       urlElement.append(document.createTextNode(request.url));
       messageElement.append(urlElement);
       messageElement.append(document.createElement('br'));
-      resultElementRef.current?.underlying.appendChild(messageElement);
+      resultElementRef.current?.appendChild(messageElement);
     }
-    scrollToVisible(messageElement, resultElementRef.current?.underlying);
+    scrollToVisible(messageElement, resultElementRef.current);
   }
 
   function appendResponse(response: WebcrawlerResponse) {
-    const messageElement = resultElementRef.current?.underlying.querySelector(`[data-url="${response.url}"]`);
+    const messageElement = resultElementRef.current?.querySelector(`[data-url="${response.url}"]`);
     if (messageElement) {
       const statusElement = messageElement.querySelector('.status')!;
       statusElement.classList.remove('pending');
       statusElement.classList.add(`code${Math.floor(response.status / 100)}xx`);
       statusElement.textContent = `${response.status}`;
-      scrollToVisible(messageElement, resultElementRef.current?.underlying);
+      scrollToVisible(messageElement, resultElementRef.current);
     }
   }
 
   function clearResult() {
-    while (resultElementRef.current?.underlying.hasChildNodes()) {
-      resultElementRef.current!.underlying.removeChild(resultElementRef.current!.underlying.lastChild!);
+    while (resultElementRef.current?.hasChildNodes()) {
+      resultElementRef.current.removeChild(resultElementRef.current.lastChild!);
     }
   }
 
   function executeScript(): Promise<ValueType[][]> {
     // make result visible
-    if (resultElementRef.current!.getActualSize() < 100) {
+    if (resultElementRef.current!.getActualSize()! < 100) {
       resultElementRef.current!.setActualSize(100);
     }
 
@@ -629,7 +631,7 @@ export default function WebCrawlerScreen(props: WebCrawlerProps) {
     <Block key="view" className="block new-dialog-screen-stretch site-view"
            size="50%" splitter="vertical" allowChangeSize={false}>
       <Toolbox>
-        <Toolbox.Button key="back" src={Icon.back} alt="Go back"
+        <ToolboxButton key="back" src={Icon.back} alt="Go back"
                         onClick={() => {
                           setState({
                             ...state,
@@ -637,11 +639,11 @@ export default function WebCrawlerScreen(props: WebCrawlerProps) {
                             proxyUrl: `/proxy/${proxySessionId}/go-back`
                           });
                         }}/>
-        <Toolbox.Button key="refresh" src={Icon.refresh} alt="Refresh"
+        <ToolboxButton key="refresh" src={Icon.refresh} alt="Refresh"
                         onClick={() => {
                           reloadProxy();
                         }}/>
-        <Toolbox.Button key="forward" src={Icon.forward} alt="Go forward"
+        <ToolboxButton key="forward" src={Icon.forward} alt="Go forward"
                         onClick={() => {
                           setState({
                             ...state,
@@ -675,7 +677,7 @@ export default function WebCrawlerScreen(props: WebCrawlerProps) {
                   ref={treeRef}
                   className="site-html-tree"
                   node={contentDocument.documentElement}
-                  container={treeContainerRef.current?.underlying || undefined}
+                  container={treeContainerRef.current || undefined}
                   highlightElement={highlightElement}
                   blurElement={blurElement}
                   selectElement={(element) => {

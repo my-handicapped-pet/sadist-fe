@@ -32,7 +32,7 @@ type CustomElement<T, K extends string = never> = Partial<Omit<T, keyof HTMLElem
     { [k in `on${'update' | 'error' | K}`]?: (e: CustomEvent) => void };
 
 declare global {
-  namespace JSX {
+  namespace React.JSX {
     interface IntrinsicElements {
       ['wired-divider']: CustomElement<WiredDivider>;
       ['wired-spinner']: CustomElement<WiredSpinner>;

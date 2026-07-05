@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Dropdown from './Dropdown';
-import draggable from './draggable';
+import { useDraggable } from '../../hook/draggable-hook';
 import Icon from '../../icon/Icon';
 
 interface ToolboxProps {
-  allowCollapse: boolean;
+  allowCollapse?: boolean;
   children?: React.ReactNode;
 }
 
@@ -39,11 +39,16 @@ interface ToolboxSwitchProps {
   onClick?: React.EventHandler<React.MouseEvent>;
 }
 
-const ToolboxItem = ({ children }: ToolboxItemProps) => {
+export const ToolboxItem = ({ children }: ToolboxItemProps) => {
   return <div className="toolbox-item">{children}</div>;
 }
 
-const ToolboxButton = ({ src, alt, title, onClick }: ToolboxButtonProps) => {
+export const ToolboxButton = ({
+                                src,
+                                alt,
+                                title,
+                                onClick
+                              }: ToolboxButtonProps) => {
   return <div className="toolbox-item">
     <wired-button onClick={onClick} title={title}>
       <img src={src} alt={alt}/>
@@ -51,7 +56,7 @@ const ToolboxButton = ({ src, alt, title, onClick }: ToolboxButtonProps) => {
   </div>;
 }
 
-const ToolboxDropdown = (
+export const ToolboxDropdown = (
     { className, src, alt, title, children }: ToolboxDropdownProps
 ) => {
   return <div className={`toolbox-item ${className}`}>
@@ -66,7 +71,13 @@ const ToolboxDropdown = (
   </div>;
 }
 
-const ToolboxSwitch = ({ src, alt, title, state, onClick }: ToolboxSwitchProps) => {
+export const ToolboxSwitch = ({
+                                src,
+                                alt,
+                                title,
+                                state,
+                                onClick
+                              }: ToolboxSwitchProps) => {
   src = typeof src == 'string' ? src : src?.[state];
   alt = typeof alt == 'string' ? alt : alt?.[state];
   title = typeof title == 'string' ? title : title?.[state];
@@ -80,38 +91,26 @@ const ToolboxSwitch = ({ src, alt, title, state, onClick }: ToolboxSwitchProps) 
   </div>;
 }
 
-class Toolbox extends React.Component<ToolboxProps, ToolboxState> {
-  static Item = ToolboxItem;
-  static Button = ToolboxButton;
-  static Dropdown = ToolboxDropdown;
-  static Switch = ToolboxSwitch;
+const Toolbox = ({ allowCollapse = true, children }: ToolboxProps) => {
+  let ref = useDraggable<HTMLDivElement>();
 
-  static defaultProps = {
-    allowCollapse: true,
+  const [state, setState] = useState<ToolboxState>({ collapsed: false });
+
+  const collapse = () => {
+    setState({ ...state, collapsed: !state.collapsed });
   }
 
-  constructor(props: Readonly<ToolboxProps> | ToolboxProps) {
-    super(props);
-    this.state = { collapsed: false };
-  }
-
-  collapse = () => {
-    this.setState({ ...this.state, collapsed: !this.state.collapsed });
-  }
-
-  renderCollapseIcon = () => <wired-button
+  const renderCollapseIcon = () => <wired-button
       className="toolbox-collapse-button"
-      onClick={this.collapse}
+      onClick={collapse}
   >
     <img src={Icon.dots}/>
   </wired-button>;
 
-  render() {
-    return <div className="toolbox">
-      {!this.state.collapsed && this.props.children}
-      {this.props.allowCollapse && this.renderCollapseIcon()}
-    </div>;
-  }
+  return <div ref={ref} className="toolbox">
+    {!state.collapsed && children}
+    {allowCollapse && renderCollapseIcon()}
+  </div>;
 }
 
-export default draggable(Toolbox) as unknown as typeof Toolbox;
+export default Toolbox;

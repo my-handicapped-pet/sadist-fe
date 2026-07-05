@@ -1,13 +1,10 @@
-import React, {
-  lazy,
-  Suspense,
-  useEffect,
-  useImperativeHandle,
-  useRef
-} from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import equal from 'deep-equal';
 import type { EditorInterface } from './Editor';
 import Block from './Block';
+import { useRefToForward } from '../../hook/ref-hooks';
+
+const JsonEditor = lazy(() => import('./Editor'));
 
 interface ObjectEditorParams<T> extends React.HTMLProps<HTMLDivElement> {
   obj?: T;
@@ -22,18 +19,15 @@ interface ObjectEditorParams<T> extends React.HTMLProps<HTMLDivElement> {
   onUnchanged?(): void;
 }
 
-export interface ObjectEditorInterface {
-  underlying: EditorInterface | null;
-
+export interface ObjectEditorInterface extends EditorInterface {
   save(): boolean;
 }
 
 /**
  * General-purpose editor of (almost) any object.
  */
-const ObjectEditor = <T extends any>(params: ObjectEditorParams<T>, ref: React.ForwardedRef<ObjectEditorInterface>) => {
-  const _JsonEditor = lazy(() => import('./Editor')),
-      jsonEditorRef = useRef<EditorInterface | null>(null);
+const ObjectEditor = React.forwardRef(<T extends any>(params: ObjectEditorParams<T>, ref: React.ForwardedRef<ObjectEditorInterface>) => {
+  const [jsonEditor, setJsonEditor] = useState<EditorInterface | null>(null);
 
   const {
     id,
@@ -66,20 +60,12 @@ const ObjectEditor = <T extends any>(params: ObjectEditorParams<T>, ref: React.F
     }
   }
 
-  useImperativeHandle(ref, () => ( {
-    underlying: jsonEditorRef.current,
-
+  const editorRef = useRefToForward<EditorInterface, ObjectEditorInterface>(ref, (editor) => ( {
     save(): boolean {
-      if (!jsonEditorRef.current) {
-        // If editor ref isn't yet set, we can fairly conclude
-        // that object isn't changed
-        onUnchanged?.();
-        return true;
-      }
       try {
-        const text = jsonEditorRef.current!.getText();
+        const text = editor.getText();
         // validate newObj over schema
-        jsonEditorRef.current!.validate();
+        editor.validate();
         const newObj = JSON.parse(text);
         if (equal(obj, newObj)) {
           onUnchanged?.();
@@ -91,7 +77,7 @@ const ObjectEditor = <T extends any>(params: ObjectEditorParams<T>, ref: React.F
         setError(e.message);
         // monaco-style positioning. Not very good to stick to it, but let it be...
         if (typeof e.startLineNumber == 'number' && typeof e.startColumn == 'number') {
-          jsonEditorRef.current!.setCursor([e.startLineNumber - 1, e.startColumn - 1]);
+          editor.setCursor([e.startLineNumber - 1, e.startColumn - 1]);
         }
         return false;
       }
@@ -103,23 +89,26 @@ const ObjectEditor = <T extends any>(params: ObjectEditorParams<T>, ref: React.F
   });
 
   useEffect(() => {
-    if (jsonEditorRef.current && onChanging) {
-      jsonEditorRef.current.on('change', onChanging);
+    if (jsonEditor && onChanging) {
+      jsonEditor.on('change', onChanging);
 
-      return () => jsonEditorRef.current?.off('change', onChanging);
+      return () => jsonEditor.off('change', onChanging);
     }
 
     return undefined;
-  }, [jsonEditorRef.current]);
+  }, [jsonEditor, onChanging]);
 
   // If object is undefined, let a user start from the empty slate,
   // otherwise it must be non-empty JSON serialization.
   let text = obj == undefined ? '' : JSON.stringify(obj, undefined, 2);
   return <Suspense fallback="loading...">
     <div className="block-container-vertical">
-      <_JsonEditor
+      <JsonEditor
           // @ts-ignore I honestly don't know why TS goes off here
-          ref={jsonEditorRef}
+          ref={(editor) => {
+            editorRef.current = editor;
+            setJsonEditor(editor);
+          }}
           id={id || 'orphan-editor'}
           language="json"
           text={text}
@@ -132,6 +121,6 @@ const ObjectEditor = <T extends any>(params: ObjectEditorParams<T>, ref: React.F
       </Block>
     </div>
   </Suspense>;
-};
+});
 
-export default React.forwardRef(ObjectEditor);
+export default ObjectEditor;
